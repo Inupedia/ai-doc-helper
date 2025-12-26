@@ -1,10 +1,11 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { getEffectiveApiKey, getEffectiveModel } from '../../utils/settings';
+import { getEffectiveApiKey, getEffectiveModel, getEffectiveBaseUrl } from '../../utils/settings';
+import { generateContent } from '../../utils/aiHelper';
 
 interface FormulaOCRProps {
   onResult: (latex: string) => void;
@@ -64,23 +65,17 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
     setResults(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
       const base64Data = image.split(',')[1];
-      
-      // OCR 任务优先使用视觉能力强的模型，如果用户未指定则默认用 Pro
       const modelName = getEffectiveModel('ocr');
+      const baseUrl = getEffectiveBaseUrl();
       
-      const response = await ai.models.generateContent({
-        model: modelName, 
-        contents: {
-          parts: [
-            { inlineData: { mimeType: 'image/png', data: base64Data } },
-            { text: '请识别图片中的数学公式，并提供三种格式的 JSON 输出：1. inline (单美元符号包裹的行内公式), 2. block (双美元符号包裹的独立块公式), 3. raw (不带美元符号的原始 LaTeX 代码)。' }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
+      const responseText = await generateContent({
+        apiKey,
+        model: modelName,
+        baseUrl,
+        image: base64Data,
+        prompt: '请识别图片中的数学公式，并提供三种格式的 JSON 输出：1. inline (单美元符号包裹的行内公式), 2. block (双美元符号包裹的独立块公式), 3. raw (不带美元符号的原始 LaTeX 代码)。',
+        jsonSchema: {
             type: Type.OBJECT,
             properties: {
               inline: { type: Type.STRING, description: 'Inline LaTeX string with $...$' },
@@ -88,11 +83,18 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
               raw: { type: Type.STRING, description: 'Raw LaTeX code without delimiters' }
             },
             required: ['inline', 'block', 'raw']
-          }
         }
       });
 
-      const data = JSON.parse(response.text || '{}');
+      // Parse JSON (Handling Markdown code block wrapping if API returns it)
+      let cleanJson = responseText.trim();
+      if (cleanJson.startsWith('```json')) {
+        cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const data = JSON.parse(cleanJson);
       setResults(data);
       setActiveTab('block');
     } catch (err) {

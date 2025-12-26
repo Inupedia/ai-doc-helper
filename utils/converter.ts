@@ -110,7 +110,7 @@ export async function downloadDocx(markdown: string, template: WordTemplate) {
             ]
           })
         ],
-        spacing: { before: 200, after: 200 }
+        // Removed invalid 'spacing' property
       }));
     }
     // 3. 处理表格
@@ -142,7 +142,7 @@ export async function downloadDocx(markdown: string, template: WordTemplate) {
       sections.push(new Table({
         rows: tableRows,
         width: { size: 100, type: WidthType.PERCENTAGE },
-        spacing: { before: 200, after: 200 }
+        // Removed invalid 'spacing' property
       }));
     }
     // 4. 处理块级公式

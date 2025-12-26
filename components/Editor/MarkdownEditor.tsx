@@ -1,8 +1,8 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import mammoth from 'mammoth';
-import { GoogleGenAI } from "@google/genai";
-import { getEffectiveApiKey, getEffectiveModel } from '../../utils/settings';
+import { getEffectiveApiKey, getEffectiveModel, getEffectiveBaseUrl } from '../../utils/settings';
+import { generateContent } from '../../utils/aiHelper';
 
 interface MarkdownEditorProps {
   value: string;
@@ -223,19 +223,20 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
     if (onProcessing) onProcessing(true);
     
     try {
-      const ai = new GoogleGenAI({ apiKey });
       const modelName = getEffectiveModel('text');
+      const baseUrl = getEffectiveBaseUrl();
       
-      const response = await ai.models.generateContent({
+      const newContent = await generateContent({
+        apiKey,
         model: modelName,
-        contents: `I want you to process the following Markdown document. ${tool.prompt}\n\nDocument Content:\n${value}`
+        baseUrl: baseUrl,
+        prompt: `I want you to process the following Markdown document. ${tool.prompt}\n\nDocument Content:\n${value}`
       });
       
-      const newContent = response.text || value;
       updateHistory(newContent); // AI 修改后的内容加入历史栈，方便用户撤销
     } catch (err) {
       console.error('AI Tool Error:', err);
-      alert('AI 处理失败，请检查配置。');
+      alert('AI 处理失败，请检查配置或网络连接。');
     } finally {
       if (onProcessing) onProcessing(false);
     }
@@ -267,7 +268,8 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
     reader.onload = async (event) => {
       const arrayBuffer = event.target?.result as ArrayBuffer;
       try {
-        const result = await mammoth.convertToMarkdown({ arrayBuffer });
+        // Fix: Cast mammoth to any to avoid TypeScript error about missing property
+        const result = await (mammoth as any).convertToMarkdown({ arrayBuffer });
         updateHistory(result.value);
       } catch (err) {
         console.error("Word import error:", err);

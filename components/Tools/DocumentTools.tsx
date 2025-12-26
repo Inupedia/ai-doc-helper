@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
-import { getEffectiveApiKey, getEffectiveModel } from '../../utils/settings';
+import { getEffectiveApiKey, getEffectiveModel, getEffectiveBaseUrl } from '../../utils/settings';
+import { generateContent } from '../../utils/aiHelper';
 
 interface DocumentToolsProps {
   markdown: string;
@@ -22,15 +22,16 @@ const DocumentTools: React.FC<DocumentToolsProps> = ({ markdown, onUpdate }) => 
     setIsProcessing(true);
     setActiveTool(toolName);
     try {
-      const ai = new GoogleGenAI({ apiKey });
       const modelName = getEffectiveModel('text');
+      const baseUrl = getEffectiveBaseUrl();
       
-      const response = await ai.models.generateContent({
+      const newContent = await generateContent({
+        apiKey,
         model: modelName,
-        contents: `I want you to process the following Markdown document. ${prompt}\n\nDocument Content:\n${markdown}`
+        baseUrl,
+        prompt: `I want you to process the following Markdown document. ${prompt}\n\nDocument Content:\n${markdown}`
       });
       
-      const newContent = response.text || markdown;
       onUpdate(newContent);
     } catch (err) {
       console.error('AI Tool Error:', err);

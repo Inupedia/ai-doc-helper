@@ -10,6 +10,7 @@ const UserCenter: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [selectedModel, setSelectedModel] = useState(''); // 用于存储预设模型的 ID
   const [customModelName, setCustomModelName] = useState(''); // 用于存储自定义输入的模型 ID
+  const [baseUrl, setBaseUrl] = useState(''); // 用于存储 Base URL
   const [useCustomModel, setUseCustomModel] = useState(false); // 标记当前是否选中了自定义模式
   const [isSaved, setIsSaved] = useState(false);
 
@@ -17,6 +18,7 @@ const UserCenter: React.FC = () => {
     if (showSettings) {
       const settings = getUserSettings();
       setApiKey(settings.apiKey);
+      setBaseUrl(settings.baseUrl);
       
       const storedModel = settings.model;
       // 检查存储的模型是否在预设列表中
@@ -43,13 +45,13 @@ const UserCenter: React.FC = () => {
     // 根据当前模式决定保存哪个值
     const modelToSave = useCustomModel ? customModelName.trim() : selectedModel;
     
-    // 如果是自定义模式但没填内容，不允许保存（或者可以给个默认值，这里选择不做操作或提示）
+    // 如果是自定义模式但没填内容，不允许保存
     if (useCustomModel && !modelToSave) {
         alert("请输入自定义模型名称");
         return;
     }
 
-    saveUserSettings(apiKey, modelToSave);
+    saveUserSettings(apiKey, modelToSave, useCustomModel ? baseUrl.trim() : '');
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
@@ -81,7 +83,7 @@ const UserCenter: React.FC = () => {
           <div className="absolute right-0 mt-3 w-80 bg-white rounded-[24px] shadow-2xl border border-slate-200 z-50 p-6 animate-in fade-in zoom-in duration-200 origin-top-right">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-slate-900">用户中心</h3>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold">V1.3.1</span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold">V1.3.2</span>
             </div>
             
             <div className="space-y-4">
@@ -151,6 +153,21 @@ const UserCenter: React.FC = () => {
                         </div>
 
                         <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Base URL (可选 / Optional)</label>
+                            <input 
+                                type="text" 
+                                value={baseUrl}
+                                onChange={(e) => setBaseUrl(e.target.value)}
+                                placeholder="默认使用 Google Gemini SDK"
+                                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-mono text-sm"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                                * 兼容 OpenAI 格式接口 (如阿里云 DashScope、DeepSeek)。<br/>
+                                * 示例: <code className="bg-slate-100 px-1 rounded text-slate-600">https://dashscope.aliyuncs.com/compatible-mode/v1</code>
+                            </p>
+                        </div>
+
+                        <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">模型选择 (Model)</label>
                             <div className="grid gap-3">
                                 {/* 预设模型列表 */}
@@ -191,12 +208,12 @@ const UserCenter: React.FC = () => {
                                     
                                     {/* 当选中自定义时显示的输入框 */}
                                     {useCustomModel && (
-                                        <div className="px-3 pb-3 pl-10 animate-in slide-in-from-top-2 duration-200">
+                                        <div className="px-3 pb-3 pl-10 animate-in slide-in-from-top-2 duration-200 space-y-3">
                                             <input 
                                                 type="text" 
                                                 value={customModelName}
                                                 onChange={(e) => setCustomModelName(e.target.value)}
-                                                placeholder="输入模型 ID (如: mimo-v2-flash)"
+                                                placeholder="输入模型 ID (如: qwen-plus)"
                                                 className="w-full px-3 py-2 rounded-lg border border-blue-200 focus:border-blue-400 outline-none text-sm font-mono bg-white text-slate-700"
                                             />
                                         </div>

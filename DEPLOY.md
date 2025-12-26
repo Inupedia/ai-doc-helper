@@ -63,50 +63,24 @@ npm run build
 
 ## 3. 配置 Nginx
 
-我们需要配置 Nginx 来托管 `dist` 目录中的静态文件。
+已在项目根目录为您生成了 `nginx.conf` 文件，其中配置了 IP **120.26.138.13**。
 
-### 3.1 创建配置文件
-创建一个新的 Nginx 配置文件：
+### 3.1 应用配置
+将项目中的 `nginx.conf` 复制到 Nginx 配置目录：
 
 ```bash
-sudo nano /etc/nginx/conf.d/aidoc.conf
-# 或者在 Ubuntu 上: sudo nano /etc/nginx/sites-available/aidoc
+# 复制配置文件 (假设您当前在项目根目录)
+sudo cp nginx.conf /etc/nginx/sites-available/ai-doc-helper
 ```
 
-### 3.2 填入配置内容
-请将 `your_domain_or_ip` 替换为你的域名或服务器 IP，将 `root` 路径修改为你的实际路径。
-
-```nginx
-server {
-    listen 80;
-    server_name your_domain_or_ip; # 例如: 192.168.1.100 或 aidoc.example.com
-
-    # 指向构建生成的 dist 目录
-    root /var/www/ai-doc-helper/dist;
-    index index.html;
-
-    # 开启 gzip 压缩，加快加载速度
-    gzip on;
-    gzip_min_length 1k;
-    gzip_types text/plain application/javascript text/css application/xml;
-
-    location / {
-        # 配合 React Router/SPA 使用，如果路径不存在则回退到 index.html
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 可选：缓存静态资源
-    location /assets/ {
-        expires 30d;
-        add_header Cache-Control "public";
-    }
-}
-```
+### 3.2 检查路径
+**注意**：`nginx.conf` 中默认的网站根目录是 `/var/www/ai-doc-helper/dist`。
+如果您的项目上传到了其他位置（例如 `/home/ubuntu/ai-doc-helper`），请务必修改 `/etc/nginx/sites-available/ai-doc-helper` 中的 `root` 路径。
 
 ### 3.3 激活配置并重启
 如果是在 Ubuntu 上使用了 `sites-available`，需要建立软链接：
 ```bash
-sudo ln -s /etc/nginx/sites-available/aidoc /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/ai-doc-helper /etc/nginx/sites-enabled/
 ```
 
 检查配置是否正确：
@@ -123,16 +97,8 @@ sudo systemctl restart nginx
 
 ## 4. 访问验证
 
-在浏览器中输入 `http://你的域名或IP`。
+在浏览器中输入：`http://120.26.138.13`
 
 1. 打开页面，查看是否正常加载。
 2. 打开 F12 开发者工具，检查控制台是否有报错。
 3. 尝试使用 OCR 或 AI 工具功能，确认 API Key 是否生效。
-
-## 5. 安全提示
-
-由于这是一个纯前端项目，**API Key 是被打包在前端代码中的**。这意味着有技术能力的用户可以通过查看网页源码获取你的 Key。
-
-为了提高安全性：
-1. **限制配额**：在 Google Cloud Console 中，限制该 API Key 的每日使用额度。
-2. **限制来源**：在 Google Cloud Console 中，设置 API Key 仅允许来自你的域名（HTTP Referrer）的请求。
