@@ -33,14 +33,14 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView }) => {
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm transition-transform group-hover:scale-105">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition-transform group-hover:scale-105" style={{ background: 'linear-gradient(to top right, var(--primary-color), var(--primary-hover))' }}>
                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                  </svg>
               </div>
             )}
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-slate-800 hidden md:block group-hover:text-blue-600 transition-colors">AI Doc Helper</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-800 hidden md:block hover:text-[var(--primary-color)] transition-colors">AI Doc Helper</h1>
         </div>
 
         <nav className="flex space-x-1 bg-slate-50 p-1 rounded-xl border border-slate-100 overflow-x-auto custom-scrollbar max-w-[50vw] md:max-w-none">
@@ -50,7 +50,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView }) => {
               onClick={() => setView(tab.id)}
               className={`flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                 currentView === tab.id 
-                  ? 'bg-white text-blue-600 shadow-sm' 
+                  ? 'bg-white shadow-sm text-[var(--primary-color)]' 
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
               }`}
             >
@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView }) => {
         <div className="flex items-center space-x-3">
           <button 
             onClick={() => setShowAbout(true)}
-            className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 flex items-center justify-center transition-all font-bold text-sm"
+            className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 text-slate-400 hover:text-[var(--primary-color)] hover:border-[var(--primary-50)] hover:bg-[var(--primary-50)] flex items-center justify-center transition-all font-bold text-sm"
             title="关于我们 & 帮助"
           >
             ?

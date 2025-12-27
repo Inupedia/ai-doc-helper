@@ -30,47 +30,37 @@ export const AVAILABLE_MODELS = [
   },
 ];
 
+export const THEME_PRESETS = [
+  { id: 'blue', name: '科技蓝', color: '#2563eb', hover: '#1d4ed8', light: '#eff6ff' },
+  { id: 'indigo', name: '深邃紫', color: '#4f46e5', hover: '#4338ca', light: '#eef2ff' },
+  { id: 'violet', name: '梦幻紫', color: '#7c3aed', hover: '#6d28d9', light: '#f5f3ff' },
+  { id: 'emerald', name: '自然绿', color: '#059669', hover: '#047857', light: '#ecfdf5' },
+  { id: 'rose', name: '活力红', color: '#e11d48', hover: '#be123c', light: '#fff1f2' },
+  { id: 'amber', name: '琥珀黄', color: '#d97706', hover: '#b45309', light: '#fffbeb' },
+];
+
 export const getEffectiveModel = (taskType: 'ocr' | 'text' = 'text'): string => {
-  // 1. 如果是 OCR 任务，优先检查是否有独立的 OCR 模型设置
   if (taskType === 'ocr') {
     const ocrModel = localStorage.getItem('user_model_ocr');
     if (ocrModel && ocrModel.trim() !== '') return ocrModel;
   }
-
-  // 2. 否则使用全局/文本模型
   const userModel = localStorage.getItem('user_model');
   if (userModel) return userModel;
-  
-  // 3. 默认回退
   return 'qwen3-omni-flash';
 };
 
-/**
- * 获取特定模型的完整配置 (API Key, Base URL)
- * @param modelId 指定的模型ID，如果不传则自动根据 taskType 获取
- */
 export const getModelConfig = (taskType: 'ocr' | 'text' = 'text') => {
   const modelId = getEffectiveModel(taskType);
   const preset = AVAILABLE_MODELS.find(m => m.id === modelId);
-
-  // 获取用户自定义的全局设置
   const userKey = localStorage.getItem('user_api_key');
   const userUrl = localStorage.getItem('user_base_url');
-
   let apiKey = userKey || '';
   let baseUrl = userUrl || '';
-
-  // 策略：
-  // 1. 如果用户没有设置全局 Key/URL，且当前模型是预设模型，则使用预设的 Key/URL
-  // 2. 如果用户设置了全局 Key/URL，则覆盖预设（适用于 Custom 模型或用户想用自己的 Key 跑预设模型）
   if (preset) {
     if (!apiKey && preset.defaultKey) apiKey = preset.defaultKey;
     if (!baseUrl && preset.baseUrl) baseUrl = preset.baseUrl;
   }
-
-  // 3. 环境变量兜底
   if (!apiKey) apiKey = process.env.API_KEY || '';
-
   return {
     model: modelId,
     apiKey,
@@ -91,19 +81,16 @@ export const saveUserSettings = (
   } else {
     localStorage.removeItem('user_api_key');
   }
-  
   if (textModel) {
     localStorage.setItem('user_model', textModel);
   } else {
     localStorage.removeItem('user_model');
   }
-
   if (ocrModel) {
     localStorage.setItem('user_model_ocr', ocrModel);
   } else {
     localStorage.removeItem('user_model_ocr');
   }
-
   if (baseUrl && baseUrl.trim() !== '') {
     localStorage.setItem('user_base_url', baseUrl.trim());
   } else {
@@ -111,15 +98,24 @@ export const saveUserSettings = (
   }
 };
 
+export const saveTheme = (themeId: string) => {
+  localStorage.setItem('user_theme', themeId);
+};
+
+export const getTheme = () => {
+  const stored = localStorage.getItem('user_theme');
+  return THEME_PRESETS.find(t => t.id === stored) || THEME_PRESETS[0];
+};
+
 export const getUserSettings = () => {
   return {
     apiKey: localStorage.getItem('user_api_key') || '',
     model: localStorage.getItem('user_model') || AVAILABLE_MODELS[0].id,
     ocrModel: localStorage.getItem('user_model_ocr') || '',
-    baseUrl: localStorage.getItem('user_base_url') || ''
+    baseUrl: localStorage.getItem('user_base_url') || '',
+    theme: localStorage.getItem('user_theme') || 'blue'
   };
 };
 
-// 兼容旧代码的辅助函数
 export const getEffectiveApiKey = () => getModelConfig('text').apiKey;
 export const getEffectiveBaseUrl = () => getModelConfig('text').baseUrl;

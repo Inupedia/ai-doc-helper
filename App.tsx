@@ -1,11 +1,12 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Layout/Header';
 import MarkdownEditor from './components/Editor/MarkdownEditor';
 import WordPreview from './components/Preview/WordPreview';
 import FormulaOCR from './components/OCR/FormulaOCR';
 import MultiDocProcessor from './components/MultiDoc/MultiDocProcessor';
 import { AppView, DocumentState } from './types';
+import { getTheme } from './utils/settings';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.EDITOR);
@@ -14,6 +15,29 @@ const App: React.FC = () => {
     isProcessing: false,
     progress: 0
   });
+
+  // Load and apply theme on mount
+  useEffect(() => {
+    const applyTheme = () => {
+      const theme = getTheme();
+      const root = document.documentElement;
+      root.style.setProperty('--primary-color', theme.color);
+      root.style.setProperty('--primary-hover', theme.hover);
+      root.style.setProperty('--primary-50', theme.light);
+    };
+    
+    // Listen for storage events (e.g. from UserCenter) to update theme across tabs or instantly
+    window.addEventListener('storage', applyTheme);
+    // Also listen for custom event dispatched within the same window
+    window.addEventListener('theme-change', applyTheme);
+    
+    applyTheme();
+
+    return () => {
+      window.removeEventListener('storage', applyTheme);
+      window.removeEventListener('theme-change', applyTheme);
+    };
+  }, []);
 
   const handleMarkdownChange = (val: string) => {
     setDocState(prev => ({ ...prev, markdown: val }));
@@ -90,7 +114,7 @@ const App: React.FC = () => {
       {docState.isProcessing && (
         <div className="fixed bottom-0 left-0 w-full h-1 bg-slate-100 z-50">
           <div 
-            className="h-full bg-blue-500 transition-all duration-300 ease-out" 
+            className="h-full bg-[var(--primary-color)] transition-all duration-300 ease-out" 
             style={{ width: `${docState.progress}%` }}
           />
         </div>

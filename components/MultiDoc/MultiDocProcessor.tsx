@@ -27,7 +27,14 @@ Important:
 
 const DEFAULT_REPORT_PROMPT = `You are a team leader assistant. 
 Goal: Aggregate the following weekly reports into a single, cohesive team weekly report.
-Format: Markdown. Use clear headings for "Achievements", "Risks", and "Next Steps".
+
+Requirements:
+1. **Header**: Start by explicitly listing the names of all members who submitted a report (e.g., "Contributors: Name1, Name2...").
+2. **Categorization**: Group the updates by technical domain (e.g., RL, CV, NLP, LLM Fine-tuning) rather than just listing by person.
+3. **Structure**: Use clear Markdown headings for "Team Progress", "Key Learnings", and "Next Steps".
+4. **Tone**: Professional and concise.
+5. **Language**: The output report MUST be in the same language as the input contents (e.g., if inputs are Chinese, output Chinese; if mixed, default to Chinese).
+
 Input: A list of report contents from different team members.`;
 
 const MultiDocProcessor: React.FC = () => {
@@ -88,39 +95,55 @@ const MultiDocProcessor: React.FC = () => {
   };
 
   const loadSampleFiles = async () => {
-    // 构造更多样化的测试数据，确保涵盖不同批次的作业和不同姓名
-    const samples = [
-        { 
-            name: "李四_2.docx", 
-            text: "【实验报告】\n\n实验人：李四\n日期：2026年3月15日\n实验名称：物理光学干涉实验\n\n备注：这是本学期的第三次作业，请查收。" 
-        },
-        { 
-            name: "draft_2025_wangwu.docx", 
-            text: "【期末提交】\n汇报人：王五\n时间：2025/12/20\n作业批次：第八次作业\n作业主题：前端架构设计与Vue3迁移实践\n\n正文：..." 
-        },
-        { 
-            name: "新建文本文档 (3).docx", 
-            text: "课程：数据结构\n姓名：张三\n提交时间：2026-01-01\n内容：第一次作业 - 二叉树遍历算法\n\n代码如下..." 
-        },
-        { 
-            name: "SCAN_0021.docx", 
-            text: "作业提交单\n\n学生：赵六\n时间：05月20日\n频次：第五次作业\n内容：产品发布会策划方案" 
-        },
-        {
-            name: "final_v2_resubmit.docx",
-            text: "项目：AI助手开发进度汇报\n汇报人：钱七\n日期：2月10日\n内容：第七次作业 - 界面设计优化"
-        },
-        // 新增文件 1：孙悟空，第十次作业
-        {
-            name: "math_homework_final.docx",
-            text: "《高等数学》习题集\n提交人：孙悟空\n日期：2025年11月11日\n作业信息：第十次作业\n涉及章节：微积分与线性代数"
-        },
-        // 新增文件 2：诸葛亮，第二次作业
-        {
-            name: "history_review_v3.docx",
-            text: "历史课程论文\n\n作者：诸葛亮\n提交日期：2026/06/18\n作业：第二次作业\n题目：三国历史回顾与战略分析"
-        }
-    ];
+    let samples = [];
+
+    if (mode === 'rename') {
+        // 重命名模式的示例数据
+        samples = [
+            { 
+                name: "李四_2.docx", 
+                text: "【实验报告】\n\n实验人：李四\n日期：2026年3月15日\n实验名称：物理光学干涉实验\n\n备注：这是本学期的第三次作业，请查收。" 
+            },
+            { 
+                name: "draft_2025_wangwu.docx", 
+                text: "【期末提交】\n汇报人：王五\n时间：2025/12/20\n作业批次：第八次作业\n作业主题：前端架构设计与Vue3迁移实践\n\n正文：..." 
+            },
+            { 
+                name: "新建文本文档 (3).docx", 
+                text: "课程：数据结构\n姓名：张三\n提交时间：2026-01-01\n内容：第一次作业 - 二叉树遍历算法\n\n代码如下..." 
+            },
+            { 
+                name: "SCAN_0021.docx", 
+                text: "作业提交单\n\n学生：赵六\n时间：05月20日\n频次：第五次作业\n内容：产品发布会策划方案" 
+            },
+            {
+                name: "final_v2_resubmit.docx",
+                text: "项目：AI助手开发进度汇报\n汇报人：钱七\n日期：2月10日\n内容：第七次作业 - 界面设计优化"
+            }
+        ];
+        // 设置默认重命名格式
+        setRenamePattern('20260101_张三_第一次作业_作业内容.docx');
+    } else {
+        // 周报整合模式的示例数据 (AI 算法学习小组)
+        samples = [
+            {
+                name: "周报_萧炎.docx",
+                text: "姓名：萧炎\n部门：强化学习组\n本周工作总结：\n1. 深入学习了强化学习算法基础。\n2. 重点研究了 PPO (Proximal Policy Optimization) 的数学推导与代码实现。\n3. 阅读了 DeepSeek 相关的技术报告，尝试复现 GRPO 算法在数学推理任务上的表现。\n\n下周计划：对比 PPO 与 GRPO 的显存占用情况。"
+            },
+            {
+                name: "周报_林动.docx",
+                text: "汇报人：林动\n岗位：CV算法工程师\n\n本周进度：\n- 专注于计算机视觉（CV）领域的经典算法复习。\n- 成功跑通了 YOLO v8 的目标检测 Demo。\n- 正在阅读 Mask R-CNN 的论文，准备将其应用于工业质检场景的实例分割任务。\n\n遇到的问题：Mask R-CNN 训练收敛速度较慢，正在排查原因。"
+            },
+            {
+                name: "周报_牧尘.docx",
+                text: "To: Team Leader\nFrom: 牧尘\nDate: 2024-10-24\n\nSubject: NLP 学习汇报\n\n本周主要精力投入在 NLP 基础架构上：\n1. 通读了 'Attention is all you need' 论文，彻底搞懂了 Transformer 的 Encoder-Decoder 架构。\n2. 深入研究了 BERT 模型的双向编码机制与 Masked LM 预训练任务。\n3. 尝试使用 HuggingFace Transformers 库加载 BERT 进行文本分类微调。"
+            },
+            {
+                name: "周报_唐三.docx",
+                text: "工作周报\n姓名：唐三\n方向：大模型微调 (LLM Fine-tuning)\n\n本周产出：\n- 学习了 SFT (Supervised Fine-Tuning) 的全流程数据准备。\n- 重点实践了 LoRA (Low-Rank Adaptation) 技术，通过向基座模型注入低秩矩阵，成功在单卡 3090 上完成了 7B 模型的微调。\n- 对比了全量微调与 LoRA 微调的效果差异，结论是 LoRA 性价比极高。"
+            }
+        ];
+    }
 
     const newFiles: FileItem[] = [];
 
@@ -136,9 +159,6 @@ const MultiDocProcessor: React.FC = () => {
     }
 
     setFiles(newFiles);
-    
-    // 按照用户要求，设置为长格式：日期_姓名_作业批次_内容
-    setRenamePattern('20260101_张三_第一次作业_作业内容.docx');
   };
 
   const clearFiles = () => {
@@ -302,13 +322,13 @@ const MultiDocProcessor: React.FC = () => {
         <div className="bg-slate-100 p-1 rounded-xl flex space-x-1">
           <button
             onClick={() => { setMode('rename'); clearFiles(); }}
-            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'rename' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'rename' ? 'bg-white text-[var(--primary-color)] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             📂 智能重命名 (Rename)
           </button>
           <button
             onClick={() => { setMode('report'); clearFiles(); }}
-            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'report' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'report' ? 'bg-white text-[var(--primary-color)] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             📊 周报整合 (Aggregator)
           </button>
@@ -335,7 +355,7 @@ const MultiDocProcessor: React.FC = () => {
                  </button>
                  <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all flex items-center"
+                    className="bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all flex items-center"
                  >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                     添加文件
@@ -353,9 +373,9 @@ const MultiDocProcessor: React.FC = () => {
 
         {/* Rename Format Input */}
         {mode === 'rename' && (
-            <div className="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+            <div className="mb-6 bg-[var(--primary-50)] p-4 rounded-xl border border-[var(--primary-color)] border-opacity-30">
                 <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
-                    <div className="flex items-center text-blue-800 font-bold text-sm whitespace-nowrap">
+                    <div className="flex items-center text-[var(--primary-color)] font-bold text-sm whitespace-nowrap">
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
                         目标格式参考:
                     </div>
@@ -364,18 +384,18 @@ const MultiDocProcessor: React.FC = () => {
                         value={renamePattern}
                         onChange={(e) => setRenamePattern(e.target.value)}
                         placeholder="例如: 20260101_张三_第一次作业_作业内容.docx"
-                        className="flex-1 px-4 py-2 rounded-lg border border-blue-200 bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 placeholder-slate-400"
+                        className="flex-1 px-4 py-2 rounded-lg border border-[var(--primary-color)] border-opacity-40 bg-white text-sm focus:ring-2 focus:ring-[var(--primary-color)] outline-none text-slate-900 placeholder-slate-400"
                     />
-                    <div className="text-xs text-blue-400 font-medium whitespace-nowrap hidden lg:block">
+                    <div className="text-xs text-[var(--primary-color)] opacity-70 font-medium whitespace-nowrap hidden lg:block">
                         * AI 将尝试分析内容并按此格式生成新文件名
                     </div>
                 </div>
                 {/* Sample Buttons */}
                 <div className="mt-3 flex items-center md:pl-[125px] space-x-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                    <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Try Sample:</span>
+                    <span className="text-[10px] text-[var(--primary-color)] opacity-70 font-bold uppercase tracking-wider">Try Sample:</span>
                     <button 
                         onClick={() => setRenamePattern('20260101_张三_第一次作业_作业内容.docx')}
-                        className="text-xs bg-white border border-blue-200 text-blue-600 px-2.5 py-1 rounded-md hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all cursor-pointer font-mono shadow-sm"
+                        className="text-xs bg-white border border-[var(--primary-color)] border-opacity-40 text-[var(--primary-color)] px-2.5 py-1 rounded-md hover:bg-[var(--primary-color)] hover:text-white hover:border-[var(--primary-color)] transition-all cursor-pointer font-mono shadow-sm"
                         title="点击填充此格式"
                     >
                         20260101_张三_第一次作业_作业内容.docx
@@ -403,7 +423,7 @@ const MultiDocProcessor: React.FC = () => {
                                     <td className="p-3 pl-4 text-slate-700 font-mono truncate max-w-[200px]" title={f.file.name}>{f.file.name}</td>
                                     {mode === 'rename' && (
                                         <>
-                                            <td className="p-3 text-blue-600 font-bold font-mono truncate max-w-[250px]" title={f.newName || '-'}>{f.newName || '-'}</td>
+                                            <td className="p-3 text-[var(--primary-color)] font-bold font-mono truncate max-w-[250px]" title={f.newName || '-'}>{f.newName || '-'}</td>
                                             <td className="p-3 text-slate-500 text-xs">{f.reason || '-'}</td>
                                         </>
                                     )}
@@ -411,12 +431,12 @@ const MultiDocProcessor: React.FC = () => {
                                         <div className="flex items-center justify-end space-x-2">
                                             {f.status === 'done' && <span className="text-green-500 font-bold text-xs mr-2">完成</span>}
                                             {f.status === 'pending' && <span className="text-slate-400 text-xs mr-2">待处理</span>}
-                                            {f.status === 'processing' && <span className="text-blue-500 text-xs animate-pulse mr-2">分析中...</span>}
+                                            {f.status === 'processing' && <span className="text-[var(--primary-color)] text-xs animate-pulse mr-2">分析中...</span>}
                                             
                                             {/* 单文件下载按钮 (总是显示，方便下载原文件或新文件) */}
                                             <button 
                                                 onClick={() => handleDownloadFile(f)}
-                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                                className="p-1.5 text-[var(--primary-color)] hover:bg-[var(--primary-50)] rounded-md transition-colors"
                                                 title={f.status === 'done' && f.newName ? `下载重命名文件: ${f.newName}` : "下载原始文件"}
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -432,7 +452,7 @@ const MultiDocProcessor: React.FC = () => {
                     <span className="text-xs text-slate-500 font-bold">{files.length} 个文件已加载</span>
                     <div className="flex space-x-3">
                          {files.length > 0 && (
-                            <button onClick={handleDownloadAll} className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center">
+                            <button onClick={handleDownloadAll} className="text-xs text-[var(--primary-color)] hover:text-[var(--primary-hover)] font-bold flex items-center">
                                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                 批量下载 (ZIP)
                             </button>
@@ -445,22 +465,20 @@ const MultiDocProcessor: React.FC = () => {
 
         {/* Empty State */}
         {files.length === 0 && (
-            <div className="flex-1 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 mb-6 group hover:border-blue-300 hover:bg-blue-50/10 transition-all">
+            <div className="flex-1 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 mb-6 group hover:border-[var(--primary-color)] hover:bg-[var(--primary-50)] transition-all">
                 <div className="flex flex-col items-center justify-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                    <svg className="w-12 h-12 mb-3 opacity-50 group-hover:text-blue-500 group-hover:opacity-100 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <svg className="w-12 h-12 mb-3 opacity-50 group-hover:text-[var(--primary-color)] group-hover:opacity-100 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     <p className="mb-2">拖拽或点击上方按钮上传 .docx / .md / .txt 文件</p>
                 </div>
                 
                 {/* Load Sample Button */}
-                {mode === 'rename' && (
-                    <button 
-                        onClick={loadSampleFiles}
-                        className="mt-4 flex items-center px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-bold border border-blue-200 hover:bg-blue-100 hover:shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2"
-                    >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                        加载测试文件 (Load Samples)
-                    </button>
-                )}
+                <button 
+                    onClick={loadSampleFiles}
+                    className="mt-4 flex items-center px-4 py-2 rounded-full bg-[var(--primary-50)] text-[var(--primary-color)] text-xs font-bold border border-[var(--primary-color)] border-opacity-30 hover:shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2"
+                >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                    {mode === 'rename' ? '加载重命名测试文件 (Samples)' : '加载周报测试文件 (Samples)'}
+                </button>
             </div>
         )}
 
@@ -472,7 +490,7 @@ const MultiDocProcessor: React.FC = () => {
                 className={`w-48 py-3 rounded-xl font-bold text-white shadow-lg transition-all ${
                     files.length === 0 || isProcessing 
                     ? 'bg-slate-300 cursor-not-allowed' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 hover:scale-105'
+                    : 'bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] hover:scale-105'
                 }`}
             >
                 {isProcessing ? 'AI 处理中...' : (mode === 'rename' ? '开始生成文件名' : '开始合并周报')}
@@ -481,7 +499,7 @@ const MultiDocProcessor: React.FC = () => {
             {mode === 'rename' && files.some(f => f.newName) && (
                 <button
                     onClick={downloadRenameScript}
-                    className="w-48 py-3 rounded-xl font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all flex items-center justify-center"
+                    className="w-48 py-3 rounded-xl font-bold text-[var(--primary-color)] bg-[var(--primary-50)] border border-[var(--primary-color)] border-opacity-30 hover:bg-slate-100 transition-all flex items-center justify-center"
                 >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     下载重命名脚本
@@ -515,7 +533,7 @@ const MultiDocProcessor: React.FC = () => {
                 <div className="p-6">
                     <p className="text-xs text-slate-500 mb-2">定义 AI 如何处理您的文件。保持明确的 Input/Output 指令效果最佳。</p>
                     <textarea 
-                        className="w-full h-64 p-4 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none font-mono bg-slate-50 text-slate-700 leading-relaxed shadow-inner"
+                        className="w-full h-64 p-4 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-[var(--primary-color)] outline-none resize-none font-mono bg-slate-50 text-slate-700 leading-relaxed shadow-inner"
                         value={tempPrompt}
                         onChange={(e) => setTempPrompt(e.target.value)}
                     ></textarea>
@@ -529,7 +547,7 @@ const MultiDocProcessor: React.FC = () => {
                         </button>
                         <button 
                             onClick={saveSettings}
-                            className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg"
+                            className="px-6 py-2.5 text-sm font-bold text-white bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] rounded-xl shadow-lg"
                         >
                             保存配置
                         </button>

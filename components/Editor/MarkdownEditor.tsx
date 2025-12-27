@@ -283,7 +283,11 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
           <div className="relative">
             <button
               onClick={() => setShowAiTools(!showAiTools)}
-              className={`flex items-center px-3 py-1.5 rounded text-[11px] font-bold border transition-all ${showAiTools ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+              className={`flex items-center px-3 py-1.5 rounded text-[11px] font-bold border transition-all ${
+                  showAiTools 
+                  ? 'bg-[var(--primary-50)] text-[var(--primary-color)] border-[var(--primary-50)]' 
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-[var(--primary-color)] hover:text-[var(--primary-color)]'
+              }`}
             >
               <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               AI 助手
@@ -294,17 +298,17 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowAiTools(false)}></div>
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                   <div className="px-3 py-2 bg-indigo-50 border-b border-indigo-100">
-                       <p className="text-[10px] text-indigo-600 font-medium">当前引擎: {activeConfig.modelName}</p>
+                   <div className="px-3 py-2 bg-[var(--primary-50)] border-b border-slate-100">
+                       <p className="text-[10px] text-[var(--primary-color)] font-medium">当前引擎: {activeConfig.modelName}</p>
                    </div>
                    <div className="py-1 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {tools.map(tool => (
-                        <div key={tool.id} className="group flex items-center w-full hover:bg-indigo-50 transition-colors pr-2">
+                        <div key={tool.id} className="group flex items-center w-full hover:bg-[var(--primary-50)] transition-colors pr-2">
                             <button
                                 onClick={() => runAiTool(tool)}
-                                className="flex-1 text-left px-4 py-2.5 text-xs text-slate-700 hover:text-indigo-700 font-medium flex items-center"
+                                className="flex-1 text-left px-4 py-2.5 text-xs text-slate-700 hover:text-[var(--primary-color)] font-medium flex items-center"
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full mr-2 transition-colors ${tool.isCustom ? 'bg-orange-300 group-hover:bg-orange-500' : 'bg-indigo-200 group-hover:bg-indigo-500'}`}></span>
+                                <span className={`w-1.5 h-1.5 rounded-full mr-2 transition-colors ${tool.isCustom ? 'bg-orange-300 group-hover:bg-orange-500' : 'bg-slate-300 group-hover:bg-[var(--primary-color)]'}`}></span>
                                 {tool.title}
                             </button>
                             <button
@@ -325,9 +329,9 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                    <div className="border-t border-slate-100 p-1 bg-slate-50">
                         <button 
                             onClick={() => { setShowAiTools(false); setIsCreating(true); }}
-                            className="w-full text-left px-3 py-2 text-[11px] text-blue-600 hover:bg-blue-100/50 rounded-lg font-bold flex items-center transition-colors"
+                            className="w-full text-left px-3 py-2 text-[11px] text-[var(--primary-color)] hover:bg-[var(--primary-50)] rounded-lg font-bold flex items-center transition-colors"
                         >
-                            <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2 text-blue-600">
+                            <div className="w-5 h-5 rounded-full bg-[var(--primary-50)] flex items-center justify-center mr-2 text-[var(--primary-color)]">
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                             </div>
                             新建自定义功能
@@ -342,7 +346,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
         <div className="flex items-center">
             <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center px-3 py-1.5 rounded bg-blue-50 text-blue-600 text-[11px] font-bold border border-blue-100 hover:bg-blue-100 transition-all"
+            className="flex items-center px-3 py-1.5 rounded bg-[var(--primary-50)] text-[var(--primary-color)] text-[11px] font-bold border border-[var(--primary-50)] hover:brightness-95 transition-all"
             >
             <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -360,14 +364,14 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
       </div>
       <textarea
         ref={textareaRef}
-        className="flex-1 w-full p-8 resize-none focus:outline-none markdown-editor text-sm leading-relaxed text-slate-800 bg-white selection:bg-blue-100"
+        className="flex-1 w-full p-8 resize-none focus:outline-none markdown-editor text-sm leading-relaxed text-slate-800 bg-white selection:bg-[var(--primary-50)]"
         placeholder="在这里输入 Markdown 内容，或点击上方导入 Word... (支持 Ctrl+Z 撤销)"
         value={value}
         onChange={handleTextareaChange}
         onKeyDown={handleKeyDown}
       />
 
-      {/* Modals for Edit/Create (omitted for brevity as they are unchanged) */}
+      {/* Modals for Edit/Create */}
       {editingTool && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/10 backdrop-blur-[2px]">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
@@ -380,7 +384,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                 <div className="p-6">
                     <p className="text-xs text-slate-500 mb-2">您可以修改发送给 AI 的指令以微调结果：</p>
                     <textarea 
-                        className="w-full h-40 p-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none font-mono bg-slate-50 text-slate-700"
+                        className="w-full h-40 p-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent outline-none resize-none font-mono bg-slate-50 text-slate-700"
                         value={editPromptValue}
                         onChange={(e) => setEditPromptValue(e.target.value)}
                     ></textarea>
@@ -389,7 +393,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                             {!editingTool.isCustom ? (
                                 <button 
                                     onClick={() => resetToolPrompt(editingTool.id)}
-                                    className="text-xs text-slate-400 hover:text-blue-500 font-medium hover:underline"
+                                    className="text-xs text-slate-400 hover:text-[var(--primary-color)] font-medium hover:underline"
                                 >
                                     恢复默认指令
                                 </button>
@@ -412,7 +416,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                             </button>
                             <button 
                                 onClick={() => saveToolPrompt(editingTool.id, editPromptValue)}
-                                className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                                className="px-4 py-2 text-xs font-bold text-white bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] rounded-lg shadow-sm transition-colors"
                             >
                                 保存修改
                             </button>
@@ -437,7 +441,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">功能名称 (Title)</label>
                         <input 
                             type="text"
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent outline-none bg-white"
                             placeholder="例如：翻译为日文"
                             value={newToolTitle}
                             onChange={(e) => setNewToolTitle(e.target.value)}
@@ -446,7 +450,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">指令 (Prompt)</label>
                         <textarea 
-                            className="w-full h-32 p-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none font-mono bg-slate-50 text-slate-700"
+                            className="w-full h-32 p-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent outline-none resize-none font-mono bg-slate-50 text-slate-700"
                             placeholder="告诉 AI 应该怎么处理您的文档..."
                             value={newToolPrompt}
                             onChange={(e) => setNewToolPrompt(e.target.value)}
@@ -461,7 +465,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
                         </button>
                         <button 
                             onClick={createTool}
-                            className="px-6 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+                            className="px-6 py-2 text-xs font-bold text-white bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] rounded-lg shadow-sm transition-colors"
                         >
                             创建功能
                         </button>

@@ -379,7 +379,7 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
             <div className="bg-slate-100 p-1 rounded-xl inline-flex shadow-inner">
                 <button 
                     onClick={() => setMode('formula')}
-                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'formula' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'formula' ? 'bg-white text-[var(--primary-color)] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     Σ 公式识别
                 </button>
@@ -398,16 +398,16 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
             </div>
         </div>
 
-        <div className="inline-flex items-center px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
-             <span className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
-             <span className="text-xs font-bold text-indigo-700">当前引擎: {activeConfig.modelName}</span>
+        <div className="inline-flex items-center px-3 py-1 bg-[var(--primary-50)] border border-[var(--primary-50)] rounded-full">
+             <span className="w-2 h-2 rounded-full bg-[var(--primary-color)] mr-2 animate-pulse"></span>
+             <span className="text-xs font-bold text-[var(--primary-color)]">当前引擎: {activeConfig.modelName}</span>
         </div>
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column: Image Input */}
         <div className="space-y-6">
-          <div className="bg-white border-2 border-dashed border-slate-300 rounded-3xl h-[450px] flex flex-col items-center justify-center relative overflow-hidden group hover:border-blue-500 hover:bg-blue-50/30 transition-all duration-300 shadow-sm">
+          <div className="bg-white border-2 border-dashed border-slate-300 rounded-3xl h-[450px] flex flex-col items-center justify-center relative overflow-hidden group hover:border-[var(--primary-color)] hover:bg-[var(--primary-50)] transition-all duration-300 shadow-sm">
             {image ? (
               <>
                 <img src={image} alt="Preview" className="max-h-full max-w-full object-contain p-6" />
@@ -417,7 +417,7 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
               </>
             ) : (
               <div className="text-center cursor-pointer p-10 w-full h-full flex flex-col items-center justify-center" onClick={() => fileInputRef.current?.click()}>
-                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-blue-500 group-hover:scale-110 transition-transform">
+                <div className="w-16 h-16 bg-[var(--primary-50)] rounded-full flex items-center justify-center mb-4 text-[var(--primary-color)] group-hover:scale-110 transition-transform">
                     {mode === 'formula' ? (
                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                     ) : mode === 'table' ? (
@@ -434,7 +434,7 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
                     onClick={(e) => { e.stopPropagation(); loadSample(); }}
                     className={`mt-6 text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${
                         mode === 'formula' 
-                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' 
+                        ? 'bg-[var(--primary-50)] text-[var(--primary-color)] border-[var(--primary-color)] hover:bg-[var(--primary-hover)] hover:text-white' 
                         : mode === 'table'
                         ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                         : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
@@ -451,7 +451,7 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
             className={`w-full py-4 rounded-2xl font-bold text-lg transition-all flex flex-col items-center justify-center ${
                 !image || isAnalyzing 
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
-                : mode === 'formula' ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xl' 
+                : mode === 'formula' ? 'bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] text-white shadow-xl' 
                 : mode === 'table' ? 'bg-green-600 hover:bg-green-700 text-white shadow-xl'
                 : 'bg-amber-500 hover:bg-amber-600 text-white shadow-xl'
             }`}
@@ -473,12 +473,12 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
                 <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
                     <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
                         {['block', 'inline', 'raw', 'html'].map(tab => (
-                            <button key={tab} onClick={() => setActiveFormulaTab(tab as any)} className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize ${activeFormulaTab === tab ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+                            <button key={tab} onClick={() => setActiveFormulaTab(tab as any)} className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize ${activeFormulaTab === tab ? 'bg-white text-[var(--primary-color)] shadow-sm' : 'text-slate-500'}`}>
                                 {tab}
                             </button>
                         ))}
                     </div>
-                    <div className="bg-slate-900 p-4 rounded-xl text-blue-300 font-mono text-xs break-all overflow-y-auto max-h-32 shadow-inner">
+                    <div className="bg-slate-900 p-4 rounded-xl text-[var(--primary-50)] font-mono text-xs break-all overflow-y-auto max-h-32 shadow-inner">
                         {formulaResult[activeFormulaTab]}
                     </div>
                     <div className="flex-1 border border-slate-100 rounded-xl flex items-center justify-center p-4 overflow-auto bg-slate-50/50">
@@ -616,7 +616,7 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
                 <button 
                     onClick={insertContent} 
                     className={`text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition-colors flex items-center ${
-                        mode === 'formula' ? 'bg-blue-600 hover:bg-blue-700' : 
+                        mode === 'formula' ? 'bg-[var(--primary-color)] hover:bg-[var(--primary-hover)]' : 
                         mode === 'table' ? 'bg-green-600 hover:bg-green-700' : 
                         'bg-amber-500 hover:bg-amber-600'
                     }`}

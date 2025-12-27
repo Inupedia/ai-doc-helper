@@ -76,7 +76,7 @@ const DocumentTools: React.FC<DocumentToolsProps> = ({ markdown, onUpdate }) => 
   return (
     <div className="max-w-5xl mx-auto space-y-12 pb-20">
       <div className="text-center">
-        <div className="inline-block px-4 py-1.5 mb-4 rounded-full bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-widest">
+        <div className="inline-block px-4 py-1.5 mb-4 rounded-full bg-[var(--primary-50)] text-[var(--primary-color)] text-xs font-bold uppercase tracking-widest">
           Document Intelligence
         </div>
         <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">AI 智能处理中心</h2>
@@ -96,11 +96,11 @@ const DocumentTools: React.FC<DocumentToolsProps> = ({ markdown, onUpdate }) => 
           <div 
             key={tool.id} 
             className={`group relative bg-white border border-slate-200 rounded-[32px] p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 ${
-              activeTool === tool.id ? 'ring-2 ring-blue-500 border-transparent' : 'hover:border-blue-200'
+              activeTool === tool.id ? 'ring-2 ring-[var(--primary-color)] border-transparent' : 'hover:border-[var(--primary-color)] hover:border-opacity-30'
             }`}
           >
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-all duration-500 ${
-              activeTool === tool.id ? 'bg-blue-600 text-white rotate-12' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'
+              activeTool === tool.id ? 'bg-[var(--primary-color)] text-white rotate-12' : 'bg-slate-50 text-slate-400 group-hover:bg-[var(--primary-50)] group-hover:text-[var(--primary-color)]'
             }`}>
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tool.icon} />
@@ -114,10 +114,10 @@ const DocumentTools: React.FC<DocumentToolsProps> = ({ markdown, onUpdate }) => 
               disabled={isProcessing}
               className={`w-full py-4 rounded-2xl text-sm font-black transition-all ${
                 activeTool === tool.id
-                  ? 'bg-blue-600 text-white shadow-xl'
+                  ? 'bg-[var(--primary-color)] text-white shadow-xl'
                   : isProcessing
                   ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                  : 'bg-slate-900 text-white hover:bg-blue-600 hover:shadow-xl active:scale-95'
+                  : 'bg-slate-900 text-white hover:bg-[var(--primary-color)] hover:shadow-xl active:scale-95'
               }`}
             >
               {activeTool === tool.id ? (
@@ -134,7 +134,7 @@ const DocumentTools: React.FC<DocumentToolsProps> = ({ markdown, onUpdate }) => 
         ))}
       </div>
 
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] p-10 text-white shadow-2xl relative overflow-hidden group">
+      <div className="bg-gradient-to-br from-[var(--primary-color)] to-[var(--primary-hover)] rounded-[32px] p-10 text-white shadow-2xl relative overflow-hidden group">
         <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-center md:space-x-8">
           <div className="bg-white/20 p-4 rounded-3xl backdrop-blur-md mb-6 md:mb-0">
@@ -144,7 +144,7 @@ const DocumentTools: React.FC<DocumentToolsProps> = ({ markdown, onUpdate }) => 
           </div>
           <div>
             <h4 className="text-xl font-bold mb-2">私有化配置 (Privacy)</h4>
-            <p className="text-blue-100 text-sm leading-relaxed max-w-2xl">
+            <p className="text-white opacity-90 text-sm leading-relaxed max-w-2xl">
               您在右上角配置的 API Key 仅保存在本地浏览器中，适合个人使用。如需在团队内部署，建议通过服务器环境变量（Environment Variables）注入 Key。
             </p>
           </div>
