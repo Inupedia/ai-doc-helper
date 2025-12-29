@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import mammoth from 'mammoth';
 import { getModelConfig } from '../../utils/settings';
-import { generateContent } from '../../utils/aiHelper';
+import { generateContentStream } from '../../utils/aiHelper';
 
 interface MarkdownEditorProps {
   value: string;
@@ -41,6 +41,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
   const [showAiTools, setShowAiTools] = useState(false);
   const [history, setHistory] = useState<string[]>([value]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [isLocked, setIsLocked] = useState(false); // Locking editor during streaming
   
   // Selection State for UI feedback
   const [selectionRange, setSelectionRange] = useState<{start: number, end: number} | null>(null);
@@ -170,6 +171,10 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isLocked) {
+        e.preventDefault();
+        return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
       e.preventDefault();
       if (e.shiftKey) {
@@ -200,6 +205,34 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
       checkSelection();
   };
 
+  // Support Image Paste
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    let hasImage = false;
+
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            hasImage = true;
+            e.preventDefault();
+            const blob = items[i].getAsFile();
+            if (blob) {
+                // Convert to Base64
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target?.result as string;
+                    if (base64) {
+                        insertText(`![image](${base64})\n`);
+                    }
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+    }
+    
+    // If we handled an image, we prevented default. If mixed text/image, typical markdown editors prioritize text or handle one.
+    // Here we stop if image found to avoid double paste if browser handles it weirdly, or just let text paste naturally if no image.
+  };
+
   const toolbarActions = [
     { label: 'H1', action: () => insertText('# ') },
     { label: 'H2', action: () => insertText('## ') },
@@ -214,15 +247,11 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Detect selection
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const hasSelection = start !== end;
-    
-    // Determine target content
     const textToProcess = hasSelection ? value.substring(start, end) : value;
 
-    // Use 'text' config
     const config = getModelConfig('text');
     if (!config.apiKey) {
         alert('请先在右上角用户中心配置 API Key');
@@ -230,36 +259,49 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
     }
 
     if (onProcessing) onProcessing(true);
+    setIsLocked(true); // Lock editor
     
     try {
-      // Modify prompt context slightly if selection
       const contextPrefix = hasSelection 
         ? "I want you to process the following text FRAGMENT (snippet from a larger document)." 
         : "I want you to process the following Markdown document.";
+      
+      const fullPrompt = `${contextPrefix} ${tool.prompt}\n\nContent:\n${textToProcess}`;
+      
+      // Initial state before streaming
+      const beforeContent = hasSelection ? value.substring(0, start) : '';
+      const afterContent = hasSelection ? value.substring(end) : '';
+      let accumulatedGeneratedText = '';
 
-      const newContent = await generateContent({
+      // Start Stream
+      const stream = generateContentStream({
         apiKey: config.apiKey,
         model: config.model,
         baseUrl: config.baseUrl,
-        prompt: `${contextPrefix} ${tool.prompt}\n\nContent:\n${textToProcess}`
+        prompt: fullPrompt
       });
-      
-      if (hasSelection) {
-          // Replace only the selected part
-          const before = value.substring(0, start);
-          const after = value.substring(end);
-          const newValue = before + newContent + after;
-          updateHistory(newValue);
-      } else {
-          // Replace full doc
-          updateHistory(newContent); 
+
+      for await (const chunk of stream) {
+          accumulatedGeneratedText += chunk;
+          // Real-time update
+          const newDoc = beforeContent + accumulatedGeneratedText + afterContent;
+          onChange(newDoc);
       }
       
+      // Final history update
+      const finalDoc = beforeContent + accumulatedGeneratedText + afterContent;
+      updateHistory(finalDoc);
+
     } catch (err) {
       console.error('AI Tool Error:', err);
       alert('AI 处理失败，请检查配置或网络连接。');
     } finally {
       if (onProcessing) onProcessing(false);
+      setIsLocked(false);
+      // Restore focus
+      setTimeout(() => {
+          if (textareaRef.current) textareaRef.current.focus();
+      }, 50);
     }
   };
 
@@ -300,10 +342,8 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
     if(fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // 获取当前配置用于 UI 显示
   const activeConfig = getModelConfig('text');
 
-  // 计算选区预览片段
   const selectedContent = selectionRange ? value.substring(selectionRange.start, selectionRange.end) : '';
   const displaySnippet = selectedContent.length > 28 
       ? selectedContent.substring(0, 28).replace(/[\n\r]+/g, ' ') + '...' 
@@ -317,7 +357,8 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
             <button
               key={idx}
               onClick={btn.action}
-              className="p-1.5 px-3 rounded hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-300 text-[11px] font-bold text-slate-600 transition-all uppercase"
+              disabled={isLocked}
+              className="p-1.5 px-3 rounded hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-300 text-[11px] font-bold text-slate-600 transition-all uppercase disabled:opacity-50"
             >
               {btn.label}
             </button>
@@ -328,13 +369,14 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
           {/* AI Tools Dropdown */}
           <div className="relative">
             <button
-              onMouseDown={(e) => e.preventDefault()} // 阻止焦点丢失，保持编辑器内文字选中状态
-              onClick={() => { checkSelection(); setShowAiTools(!showAiTools); }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { if(!isLocked) { checkSelection(); setShowAiTools(!showAiTools); } }}
+              disabled={isLocked}
               className={`flex items-center px-3 py-1.5 rounded text-[11px] font-bold border transition-all ${
                   showAiTools 
                   ? 'bg-[var(--primary-50)] text-[var(--primary-color)] border-[var(--primary-50)]' 
                   : 'bg-white text-slate-700 border-slate-200 hover:border-[var(--primary-color)] hover:text-[var(--primary-color)]'
-              }`}
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               AI 助手
@@ -414,7 +456,8 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
         <div className="flex items-center">
             <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center px-3 py-1.5 rounded bg-[var(--primary-50)] text-[var(--primary-color)] text-[11px] font-bold border border-[var(--primary-50)] hover:brightness-95 transition-all"
+            disabled={isLocked}
+            className="flex items-center px-3 py-1.5 rounded bg-[var(--primary-50)] text-[var(--primary-color)] text-[11px] font-bold border border-[var(--primary-50)] hover:brightness-95 transition-all disabled:opacity-50"
             >
             <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -432,13 +475,15 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
       </div>
       <textarea
         ref={textareaRef}
-        className="flex-1 w-full p-8 resize-none focus:outline-none markdown-editor text-sm leading-relaxed text-slate-800 bg-white selection:bg-[var(--primary-50)]"
-        placeholder="在这里输入 Markdown 内容，或点击上方导入 Word... (支持 Ctrl+Z 撤销)"
+        className={`flex-1 w-full p-8 resize-none focus:outline-none markdown-editor text-sm leading-relaxed text-slate-800 bg-white selection:bg-[var(--primary-50)] ${isLocked ? 'cursor-wait opacity-80' : ''}`}
+        placeholder="在这里输入 Markdown 内容，或点击上方导入 Word... (支持 Ctrl+Z 撤销，支持直接粘贴截图)"
         value={value}
         onChange={handleTextareaChange}
         onSelect={checkSelection}
         onKeyDown={handleKeyDown}
         onClick={checkSelection}
+        onPaste={handlePaste} // Paste Handler Added
+        readOnly={isLocked}
       />
 
       {/* Modals for Edit/Create */}

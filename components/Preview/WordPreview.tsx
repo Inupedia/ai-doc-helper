@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { WordTemplate } from '../../types';
+import { WordTemplate, DocumentStyle } from '../../types';
 import { downloadDocx } from '../../utils/converter';
 
 interface WordPreviewProps {
@@ -19,6 +19,18 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
   const containerRef = useRef<HTMLDivElement>(null);
   const paperRef = useRef<HTMLDivElement>(null);
   const wechatContentRef = useRef<HTMLDivElement>(null);
+
+  // Style Customization State
+  const [showStylePanel, setShowStylePanel] = useState(false);
+  const [customStyle, setCustomStyle] = useState<DocumentStyle>({
+      fontFace: "SimSun",
+      fontSize: 12,
+      lineSpacing: 1.5,
+      headingColor: "000000",
+      textColor: "000000",
+      alignment: "justify",
+      paragraphSpacing: 200
+  });
 
   // 动态计算缩放比例，确保 A4 纸张完整显示
   useEffect(() => {
@@ -44,6 +56,13 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
   }, [markdown]);
 
   const getTemplateStyles = () => {
+    // If Custom template selected, use inline styles roughly approximating the docx settings for preview
+    if (template === WordTemplate.CUSTOM) {
+        // Note: Tailwind classes won't perfectly match arbitrary user values, 
+        // so we use inline styles on the container for some props.
+        return "max-w-none px-[25mm] py-[30mm] bg-white shadow-2xl mx-auto border border-slate-200";
+    }
+
     switch(template) {
       case WordTemplate.ACADEMIC:
         return "prose-academic text-[10.5pt] leading-[1.6] px-[25mm] py-[30mm] bg-white shadow-2xl mx-auto border border-slate-200";
@@ -54,8 +73,19 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
     }
   };
 
+  const getCustomPreviewStyle = () => {
+      if (template !== WordTemplate.CUSTOM) return {};
+      return {
+          fontFamily: customStyle.fontFace === 'SimSun' ? '"SimSun", serif' : customStyle.fontFace,
+          fontSize: `${customStyle.fontSize}pt`,
+          lineHeight: customStyle.lineSpacing,
+          color: `#${customStyle.textColor}`,
+          textAlign: customStyle.alignment as any
+      };
+  };
+
   const handleDownload = async () => {
-    await downloadDocx(markdown, template);
+    await downloadDocx(markdown, template, template === WordTemplate.CUSTOM ? customStyle : undefined);
   };
 
   // 复制为微信公众号格式
@@ -64,11 +94,9 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
     
     const content = wechatContentRef.current;
     
-    // 创建一个 Range 对象
     const range = document.createRange();
     range.selectNode(content);
     
-    // 获取 Selection 对象
     const selection = window.getSelection();
     if (selection) {
         selection.removeAllRanges();
@@ -88,7 +116,7 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
 
   return (
     <div className="flex flex-col h-full bg-[#8E97A4] overflow-hidden" ref={containerRef}>
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-300 shadow-md z-20 space-x-2">
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-300 shadow-md z-20 space-x-2 relative">
         <div className="flex items-center space-x-2 flex-1 overflow-hidden">
           <div className="flex items-center whitespace-nowrap">
              <span className="text-xs font-semibold text-[var(--primary-color)] mr-2">
@@ -96,17 +124,73 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
              </span>
           </div>
           <div className="h-4 w-[1px] bg-slate-200"></div>
-          <select 
-            value={template} 
-            onChange={(e) => setTemplate(e.target.value as WordTemplate)}
-            className="text-xs bg-slate-50 border border-slate-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--primary-color)] font-medium text-slate-700 w-full max-w-[150px]"
-          >
-            <option value={WordTemplate.STANDARD}>📄 标准公文</option>
-            <option value={WordTemplate.ACADEMIC}>🎓 学术论文</option>
-            <option value={WordTemplate.NOTE}>📝 简洁笔记</option>
-          </select>
+          
+          <div className="flex items-center space-x-2">
+              <select 
+                value={template} 
+                onChange={(e) => setTemplate(e.target.value as WordTemplate)}
+                className="text-xs bg-slate-50 border border-slate-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--primary-color)] font-medium text-slate-700 w-full max-w-[150px]"
+              >
+                <option value={WordTemplate.STANDARD}>📄 标准公文</option>
+                <option value={WordTemplate.ACADEMIC}>🎓 学术论文</option>
+                <option value={WordTemplate.NOTE}>📝 简洁笔记</option>
+                <option value={WordTemplate.CUSTOM}>⚙️ 自定义...</option>
+              </select>
+
+              {template === WordTemplate.CUSTOM && (
+                  <button 
+                    onClick={() => setShowStylePanel(!showStylePanel)}
+                    className={`p-1.5 rounded-md border ${showStylePanel ? 'bg-slate-100 border-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                  >
+                      <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                  </button>
+              )}
+          </div>
         </div>
         
+        {/* Style Panel Popover */}
+        {showStylePanel && template === WordTemplate.CUSTOM && (
+            <div className="absolute top-full left-10 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 p-4 z-50 w-64 animate-in fade-in slide-in-from-top-2">
+                <h4 className="text-xs font-bold text-slate-500 mb-3 uppercase">Word 导出样式配置</h4>
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs text-slate-700 font-medium block mb-1">字体 (Font)</label>
+                        <select 
+                            value={customStyle.fontFace}
+                            onChange={(e) => setCustomStyle({...customStyle, fontFace: e.target.value})}
+                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent outline-none"
+                        >
+                            <option value="SimSun">宋体 (SimSun)</option>
+                            <option value="Microsoft YaHei">微软雅黑</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="KaiTi">楷体</option>
+                        </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-xs text-slate-700 font-medium block mb-1">字号 (pt)</label>
+                            <input 
+                                type="number" 
+                                value={customStyle.fontSize}
+                                onChange={(e) => setCustomStyle({...customStyle, fontSize: Number(e.target.value)})}
+                                className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-slate-700 font-medium block mb-1">行距</label>
+                            <input 
+                                type="number" 
+                                step="0.1"
+                                value={customStyle.lineSpacing}
+                                onChange={(e) => setCustomStyle({...customStyle, lineSpacing: Number(e.target.value)})}
+                                className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
         <div className="flex space-x-2">
             <button
                 onClick={copyToWeChat}
@@ -139,7 +223,10 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
           style={{ transform: `scale(${scale})` }}
         >
           {/* Main Word Preview Area */}
-          <div className={`w-[210mm] min-h-[297mm] transition-all duration-500 ${getTemplateStyles()} prose prose-slate break-words`}>
+          <div 
+            className={`w-[210mm] min-h-[297mm] transition-all duration-500 ${getTemplateStyles()} prose prose-slate break-words`}
+            style={getCustomPreviewStyle()}
+          >
             <ReactMarkdown 
               remarkPlugins={[remarkGfm, remarkMath]} 
               rehypePlugins={[rehypeKatex]}

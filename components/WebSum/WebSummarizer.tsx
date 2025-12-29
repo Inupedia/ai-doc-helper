@@ -27,16 +27,23 @@ const WebSummarizer: React.FC = () => {
   const config = getModelConfig('text');
 
   const fetchContent = async (targetUrl: string): Promise<string> => {
+    // 使用 Jina Reader 解决 CORS 问题并获取高质量 Markdown
+    // Jina Reader (https://jina.ai/reader) 是一个免费的转 Markdown 服务，对 LLM 非常友好
     try {
-        // Direct fetch (Might fail due to CORS)
-        const res = await fetch(targetUrl);
-        if (!res.ok) throw new Error("Fetch failed");
-        const html = await res.text();
+        const jinaUrl = `https://r.jina.ai/${targetUrl}`;
+        const res = await fetch(jinaUrl);
+        if (!res.ok) throw new Error(`Jina fetch failed: ${res.status}`);
+        const markdown = await res.text();
         
-        // Simple regex to extract body text (Crude but client-side only)
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        return doc.body.innerText.replace(/\s+/g, ' ').substring(0, 15000); // Limit size
+        // 简单的错误检查，Jina 有时返回 "URL missing" 等文本
+        if (markdown.includes("URL missing") || markdown.length < 50) {
+            throw new Error("Content too short or invalid");
+        }
+        
+        // 截断过长内容以节省 Token
+        return markdown.substring(0, 20000); 
     } catch (e) {
+        console.error("Content Fetch Error:", e);
         throw new Error("CORS_ERROR");
     }
   };
@@ -50,18 +57,12 @@ const WebSummarizer: React.FC = () => {
     try {
         let contentToAnalyze = '';
         
-        // Attempt 1: Client Fetch
         try {
             contentToAnalyze = await fetchContent(url);
         } catch (e: any) {
-            if (e.message === "CORS_ERROR") {
-                // If CORS fails, we can't do much purely client-side without a proxy.
-                // However, we can ask the user to paste content, OR try to send the URL to the AI directly 
-                // if the AI model supports browsing (rare via standard API) or has knowledge.
-                // For this app, we will prompt the user or try a "Blind" request if they insist.
-                setError("由于浏览器安全限制 (CORS)，无法直接读取该页面。请尝试手动复制网页内容到下方，或者如果是公开知名页面，AI 可能直接了解。");
-                contentToAnalyze = `URL: ${url} (Content fetch failed due to CORS. Please try to analyze based on knowledge or URL structure)`;
-            }
+            setError("无法读取该页面内容。可能是链接无效，或者目标网站开启了高级反爬虫保护。");
+            setIsProcessing(false);
+            return;
         }
 
         const fullPrompt = `${prompt}\n\n${contentToAnalyze}`;
@@ -98,7 +99,7 @@ const WebSummarizer: React.FC = () => {
     <div className="p-6 lg:p-12 max-w-[1440px] mx-auto min-h-full flex flex-col">
        <div className="text-center mb-10">
         <h2 className="text-3xl font-extrabold text-slate-900 mb-2">网页智能调研</h2>
-        <p className="text-slate-500">输入链接 • 即刻生成深度报告</p>
+        <p className="text-slate-500">输入链接 • 即刻生成深度报告 (Powered by Jina Reader)</p>
       </div>
 
       <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col">

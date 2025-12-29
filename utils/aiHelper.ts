@@ -51,17 +51,15 @@ export async function generateContent(req: AIRequest): Promise<string> {
     // Handle JSON mode loosely for compatible APIs
     if (req.jsonSchema) {
        body.response_format = { type: "json_object" };
-       // Append instruction to prompt to ensure JSON if not already there, as compatible APIs might not support strict schema
        const lastMsg = messages[messages.length - 1];
+       const jsonInstruction = "\n\nPlease respond in valid JSON format.";
        if (typeof lastMsg.content === 'string') {
-           lastMsg.content += "\n\nPlease respond in valid JSON format.";
+           lastMsg.content += jsonInstruction;
        } else if (Array.isArray(lastMsg.content)) {
-           lastMsg.content[0].text += "\n\nPlease respond in valid JSON format.";
+           lastMsg.content[0].text += jsonInstruction;
        }
     }
 
-    // Construct Endpoint
-    // Remove trailing slash from base url
     const cleanBaseUrl = req.baseUrl.replace(/\/+$/, '');
     const endpoint = cleanBaseUrl.endsWith('/chat/completions') 
         ? cleanBaseUrl 
@@ -121,3 +119,100 @@ export async function generateContent(req: AIRequest): Promise<string> {
 
   return response.text || "";
 }
+
+/**
+ * Stream Generator for Real-time Typewriter Effect
+ */
+export async function* generateContentStream(req: AIRequest): AsyncGenerator<string, void, unknown> {
+    const mimeType = req.mimeType || 'image/png';
+  
+    // ---------------------------------------------------------
+    // 1. OpenAI Compatible Streaming
+    // ---------------------------------------------------------
+    if (req.baseUrl) {
+      const messages: any[] = [];
+      if (req.systemInstruction) messages.push({ role: 'system', content: req.systemInstruction });
+      const content: any[] = [{ type: 'text', text: req.prompt }];
+      if (req.image) {
+        content.push({
+          type: 'image_url',
+          image_url: { url: `data:${mimeType};base64,${req.image}` }
+        });
+      }
+      messages.push({ role: 'user', content });
+  
+      const body: any = {
+        model: req.model,
+        messages: messages,
+        stream: true 
+      };
+  
+      const cleanBaseUrl = req.baseUrl.replace(/\/+$/, '');
+      const endpoint = cleanBaseUrl.endsWith('/chat/completions') 
+          ? cleanBaseUrl 
+          : `${cleanBaseUrl}/chat/completions`;
+  
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${req.apiKey}`
+        },
+        body: JSON.stringify(body)
+      });
+  
+      if (!response.ok || !response.body) {
+         throw new Error(`Stream Error ${response.status}`);
+      }
+  
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+  
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; 
+  
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            if (trimmed.startsWith('data: ')) {
+                try {
+                    const json = JSON.parse(trimmed.substring(6));
+                    const delta = json.choices?.[0]?.delta?.content;
+                    if (delta) yield delta;
+                } catch (e) {
+                    // ignore parse errors for partial chunks
+                }
+            }
+        }
+      }
+      return;
+    }
+  
+    // ---------------------------------------------------------
+    // 2. Google Gemini Native Streaming
+    // ---------------------------------------------------------
+    const ai = new GoogleGenAI({ apiKey: req.apiKey });
+    const parts: any[] = [];
+    if (req.image) parts.push({ inlineData: { mimeType: mimeType, data: req.image } });
+    parts.push({ text: req.prompt });
+  
+    const config: any = {};
+    if (req.systemInstruction) config.systemInstruction = req.systemInstruction;
+  
+    const result = await ai.models.generateContentStream({
+      model: req.model,
+      contents: { parts },
+      config
+    });
+  
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      if (chunkText) yield chunkText;
+    }
+  }
