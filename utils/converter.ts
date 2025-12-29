@@ -136,42 +136,78 @@ export function htmlToMarkdown(html: string): string {
  */
 function parseInlineStyles(text: string, font: string, fontSize: number, color: string): (TextRun | DocxMath)[] {
   const runs: (TextRun | DocxMath)[] = [];
-  const regex = /(\*\*\*?|__?|`|\$)(.*?)\1/g;
+  
+  const displayMathRegex = /\$\$(.+?)\$\$/g;
+  const inlineMathRegex = /\$(.+?)\$/g;
+  const styleRegex = /(\*\*\*?|__?|`)/g;
+  
+  let processedText = text;
+  const mathPlaceholders: { placeholder: string; content: string; isDisplay: boolean }[] = [];
+  let placeholderIndex = 0;
+  
+  processedText = processedText.replace(displayMathRegex, (match, content) => {
+    const placeholder = `__MATH_DISPLAY_${placeholderIndex}__`;
+    mathPlaceholders.push({ placeholder, content: content.trim(), isDisplay: true });
+    placeholderIndex++;
+    return placeholder;
+  });
+  
+  processedText = processedText.replace(inlineMathRegex, (match, content) => {
+    const placeholder = `__MATH_INLINE_${placeholderIndex}__`;
+    mathPlaceholders.push({ placeholder, content: content.trim(), isDisplay: false });
+    placeholderIndex++;
+    return placeholder;
+  });
+  
+  const segments: { text: string; style?: string }[] = [];
   let lastIndex = 0;
   let match;
-
-  while ((match = regex.exec(text)) !== null) {
+  
+  const combinedRegex = /(\*\*\*?|__?|`)(.*?)\1/g;
+  while ((match = combinedRegex.exec(processedText)) !== null) {
     if (match.index > lastIndex) {
-      runs.push(new TextRun({ text: text.substring(lastIndex, match.index), font, size: fontSize * 2, color }));
+      segments.push({ text: processedText.substring(lastIndex, match.index) });
     }
-
-    const marker = match[1];
-    const content = match[2];
-
-    if (marker === '***') {
-      runs.push(new TextRun({ text: content, font, size: fontSize * 2, bold: true, italics: true, color }));
-    } else if (marker === '**' || marker === '__') {
-      runs.push(new TextRun({ text: content, font, size: fontSize * 2, bold: true, color }));
-    } else if (marker === '*' || marker === '_') {
-      runs.push(new TextRun({ text: content, font, size: fontSize * 2, italics: true, color }));
-    } else if (marker === '`') {
+    segments.push({ text: match[2], style: match[1] });
+    lastIndex = combinedRegex.lastIndex;
+  }
+  
+  if (lastIndex < processedText.length) {
+    segments.push({ text: processedText.substring(lastIndex) });
+  }
+  
+  for (const segment of segments) {
+    const segmentText = segment.text;
+    
+    const mathPlaceholder = mathPlaceholders.find(m => segmentText.includes(m.placeholder));
+    if (mathPlaceholder) {
+      const parts = segmentText.split(mathPlaceholder.placeholder);
+      if (parts[0]) {
+        runs.push(new TextRun({ text: parts[0], font, size: fontSize * 2, color }));
+      }
+      runs.push(new DocxMath({
+        children: [new MathRun(mathPlaceholder.content)]
+      }));
+      if (parts[1]) {
+        runs.push(new TextRun({ text: parts[1], font, size: fontSize * 2, color }));
+      }
+    } else if (segment.style === '***') {
+      runs.push(new TextRun({ text: segmentText, font, size: fontSize * 2, bold: true, italics: true, color }));
+    } else if (segment.style === '**' || segment.style === '__') {
+      runs.push(new TextRun({ text: segmentText, font, size: fontSize * 2, bold: true, color }));
+    } else if (segment.style === '*' || segment.style === '_') {
+      runs.push(new TextRun({ text: segmentText, font, size: fontSize * 2, italics: true, color }));
+    } else if (segment.style === '`') {
       runs.push(new TextRun({ 
-        text: content, 
+        text: segmentText, 
         font: "JetBrains Mono", 
         size: (fontSize - 1) * 2, 
         shading: { type: ShadingType.SOLID, color: "F1F5F9" },
         color: "E11D48" 
       }));
-    } else if (marker === '$') {
-      runs.push(new DocxMath({
-        children: [new MathRun(content)]
-      }));
+    } else {
+      runs.push(new TextRun({ text: segmentText, font, size: fontSize * 2, color }));
     }
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    runs.push(new TextRun({ text: text.substring(lastIndex), font, size: fontSize * 2, color }));
   }
 
   return runs;

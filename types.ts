@@ -2,7 +2,8 @@
 export enum AppView {
   EDITOR = 'editor',
   AI_VISION = 'ai_vision', // Renamed from OCR
-  MULTI_DOC = 'multi_doc'
+  MULTI_DOC = 'multi_doc',
+  PDF_IMPORT = 'pdf_import'
 }
 
 export enum WordTemplate {
