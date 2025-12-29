@@ -1,8 +1,8 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import mammoth from 'mammoth';
 import { getModelConfig } from '../../utils/settings';
 import { generateContentStream } from '../../utils/aiHelper';
+import { htmlToMarkdown } from '../../utils/converter';
 
 interface MarkdownEditorProps {
   value: string;
@@ -228,9 +228,6 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
             }
         }
     }
-    
-    // If we handled an image, we prevented default. If mixed text/image, typical markdown editors prioritize text or handle one.
-    // Here we stop if image found to avoid double paste if browser handles it weirdly, or just let text paste naturally if no image.
   };
 
   const toolbarActions = [
@@ -331,8 +328,10 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProc
     reader.onload = async (event) => {
       const arrayBuffer = event.target?.result as ArrayBuffer;
       try {
-        const result = await (mammoth as any).convertToMarkdown({ arrayBuffer });
-        updateHistory(result.value);
+        // Improved: Use convertToHtml to preserve images as Base64, then parse HTML to Markdown
+        const result = await (mammoth as any).convertToHtml({ arrayBuffer });
+        const markdown = htmlToMarkdown(result.value);
+        updateHistory(markdown);
       } catch (err) {
         console.error("Word import error:", err);
         alert("Word 导入失败，请确保文件格式正确。");

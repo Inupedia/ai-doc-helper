@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,6 +40,12 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #d1d5db;
+        }
+        
+        /* Print Styles - Basic Cleanup */
+        @media print {
+            /* Handled by iframe print logic mostly, but reset body if needed */
+            body { background: white; }
         }
     </style>
 <script type="importmap">

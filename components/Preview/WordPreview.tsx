@@ -12,6 +12,48 @@ interface WordPreviewProps {
   progress: number;
 }
 
+const CodeBlock = ({ node, className, children, ...props }: any) => {
+    const [copied, setCopied] = useState(false);
+    const inline = props.inline;
+    const match = /language-(\w+)/.exec(className || '');
+    const language = match ? match[1] : '';
+
+    if (inline) {
+        return <code className="bg-slate-100 px-1.5 py-0.5 rounded text-pink-700 font-mono text-[0.9em]" {...props}>{children}</code>;
+    }
+
+    const handleCopy = () => {
+        const text = String(children).replace(/\n$/, '');
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="relative group my-6">
+            <pre className="bg-[#f8fafc] text-slate-800 p-5 rounded border border-slate-200 overflow-x-auto text-[0.85em] font-mono whitespace-pre-wrap break-all">
+                <code className={className} {...props}>{children}</code>
+            </pre>
+            <div className="absolute top-2 right-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {language && <span className="text-[10px] uppercase text-slate-400 font-bold mr-2">{language}</span>}
+                <button 
+                    onClick={handleCopy}
+                    className={`p-1.5 rounded-md text-xs font-bold flex items-center transition-all border ${copied ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-slate-500 border-slate-200 hover:text-[var(--primary-color)] hover:border-[var(--primary-color)]'}`}
+                >
+                    {copied ? (
+                        <>
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            Copied
+                        </>
+                    ) : (
+                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progress }) => {
   const [template, setTemplate] = useState<WordTemplate>(WordTemplate.STANDARD);
   const [scale, setScale] = useState(1);
@@ -19,6 +61,7 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
   const containerRef = useRef<HTMLDivElement>(null);
   const paperRef = useRef<HTMLDivElement>(null);
   const wechatContentRef = useRef<HTMLDivElement>(null);
+  const previewContentId = "word-preview-content";
 
   // Style Customization State
   const [showStylePanel, setShowStylePanel] = useState(false);
@@ -87,6 +130,84 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
   const handleDownload = async () => {
     await downloadDocx(markdown, template, template === WordTemplate.CUSTOM ? customStyle : undefined);
   };
+  
+  const handleExportPDF = () => {
+      const content = document.getElementById(previewContentId);
+      if (!content) {
+          alert('无法获取预览内容，请刷新重试');
+          return;
+      }
+
+      // 1. Create a hidden iframe
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.zIndex = '1000';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (!doc) return;
+
+      // 2. Prepare resources (Tailwind, Katex, Fonts)
+      const tailwindScript = `<script src="https://cdn.tailwindcss.com?plugins=typography"></script>`;
+      const katexCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">`;
+      const fonts = `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">`;
+      
+      // 3. Get the HTML content
+      const contentHtml = content.outerHTML;
+
+      // 4. Write to iframe
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>AI Doc Helper - Export PDF</title>
+            ${tailwindScript}
+            ${katexCss}
+            ${fonts}
+            <style>
+               body { background: white; margin: 0; padding: 0; }
+               /* Ensure printer prints background colors */
+               * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+               @page { margin: 0; }
+               /* Force A4 size visualization if needed, but @page handles printer size */
+            </style>
+          </head>
+          <body>
+            <div style="width: 210mm; margin: 0 auto; overflow: hidden; padding-top: 20px; padding-bottom: 20px;">
+              ${contentHtml}
+            </div>
+            <script>
+              // Wait for Tailwind to parse classes
+              window.onload = () => {
+                  setTimeout(() => {
+                      try {
+                        window.focus();
+                        window.print();
+                      } catch(e) {
+                        console.error('Print failed', e);
+                      }
+                      // Clean up handled by parent usually, or leave it hidden
+                  }, 800); // 800ms delay to ensure styles render
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      // Cleanup iframe after 1 minute (to allow print dialog to finish)
+      setTimeout(() => {
+          if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+          }
+      }, 60000);
+  };
 
   // 复制为微信公众号格式
   const copyToWeChat = () => {
@@ -94,6 +215,7 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
     
     const content = wechatContentRef.current;
     
+    // 创建选区
     const range = document.createRange();
     range.selectNode(content);
     
@@ -205,25 +327,40 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
                 {copyStatus ? '已复制！' : '复制公众号格式'}
             </button>
             <button 
-            onClick={handleDownload}
-            className="bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm flex items-center transform transition-all active:scale-95"
+                onClick={handleExportPDF}
+                className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold px-3 py-1.5 rounded shadow-sm flex items-center transition-all"
+                title="导出为矢量 PDF (需在打印预览中选择 '另存为 PDF')"
             >
-            <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            导出 Word
+                <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                PDF
+            </button>
+            <button 
+                onClick={handleDownload}
+                className="bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold px-3 py-1.5 rounded shadow-sm flex items-center transform transition-all active:scale-95"
+            >
+                <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Word
             </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4 lg:p-8 flex justify-center items-start scroll-smooth custom-scrollbar">
+        {/* 
+            Container for Preview. 
+            NOTE: The ID 'word-preview-wrapper' helps identify this container in styles if needed,
+            but 'paperRef' is used for scaling.
+        */}
         <div 
+          id="word-preview-wrapper"
           ref={paperRef}
           className="relative transition-transform duration-300 ease-out origin-top mb-20"
           style={{ transform: `scale(${scale})` }}
         >
           {/* Main Word Preview Area */}
           <div 
+            id={previewContentId}
             className={`w-[210mm] min-h-[297mm] transition-all duration-500 ${getTemplateStyles()} prose prose-slate break-words`}
             style={getCustomPreviewStyle()}
           >
@@ -246,15 +383,8 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
                 td: ({node, ...props}) => <td className="border border-slate-400 px-4 py-2 text-slate-700" {...props} />,
                 ul: ({node, ...props}) => <ul className="list-disc pl-8 mb-4" {...props} />,
                 ol: ({node, ...props}) => <ol className="list-decimal pl-8 mb-4" {...props} />,
-                code: ({node, className, children, ...props}: any) => {
-                  const inline = props.inline;
-                  if (inline) return <code className="bg-slate-100 px-1.5 py-0.5 rounded text-pink-700 font-mono text-[0.9em]" {...props}>{children}</code>;
-                  return (
-                    <pre className="bg-[#f8fafc] text-slate-800 p-5 rounded border border-slate-200 overflow-x-auto my-6 text-[0.85em] font-mono whitespace-pre-wrap break-all">
-                      <code {...props}>{children}</code>
-                    </pre>
-                  );
-                },
+                // Updated Code Block Component
+                code: CodeBlock,
                 // Explicitly handle math nodes to avoid object rendering errors
                 math: ({value, children}: any) => <div className="my-4 text-center">{children || value}</div>,
                 inlineMath: ({value, children}: any) => <span className="mx-1">{children || value}</span>
@@ -264,9 +394,13 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
             </ReactMarkdown>
           </div>
           
-          {/* Hidden Area for WeChat Styles (Inline Styles applied here) */}
-          <div className="hidden">
-             <div ref={wechatContentRef} style={{ width: '100%', maxWidth: '677px', fontFamily: '-apple-system-font, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif' }}>
+          {/* 
+            Hidden Area for WeChat Styles
+            CRITICAL FIX: Do not use "hidden" or display:none, as clipboard APIs often fail to copy hidden elements.
+            Instead, position it off-screen but make it "visible" to the browser.
+          */}
+          <div style={{ position: 'absolute', top: 0, left: '-9999px', width: '640px', background: '#fff', zIndex: -1 }}>
+             <div ref={wechatContentRef} style={{ width: '100%', fontFamily: '-apple-system-font, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif' }}>
                 <ReactMarkdown 
                     remarkPlugins={[remarkGfm, remarkMath]} 
                     rehypePlugins={[rehypeKatex]}
