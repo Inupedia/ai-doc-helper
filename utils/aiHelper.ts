@@ -211,8 +211,9 @@ export async function* generateContentStream(req: AIRequest): AsyncGenerator<str
       config
     });
   
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
+    // Fix: Iterate over the result directly, and use .text property
+    for await (const chunk of result) {
+      const chunkText = chunk.text;
       if (chunkText) yield chunkText;
     }
   }
