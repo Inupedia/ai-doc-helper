@@ -171,7 +171,7 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
                 // Explicitly handle math nodes to avoid object rendering errors
                 math: ({value, children}: any) => <div className="my-4 text-center">{children || value}</div>,
                 inlineMath: ({value, children}: any) => <span className="mx-1">{children || value}</span>
-              }}
+              } as any}
             >
               {markdown}
             </ReactMarkdown>
@@ -200,7 +200,7 @@ const WordPreview: React.FC<WordPreviewProps> = ({ markdown, isProcessing, progr
                         // Explicitly handle math nodes for WeChat view as well
                         math: ({value, children}: any) => <div style={{margin: '16px 0', textAlign: 'center'}}>{children || value}</div>,
                         inlineMath: ({value, children}: any) => <span style={{margin: '0 4px'}}>{children || value}</span>
-                    }}
+                    } as any}
                 >
                     {markdown}
                 </ReactMarkdown>
