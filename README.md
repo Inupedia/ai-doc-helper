@@ -103,7 +103,7 @@
 #### 3.4 智能重命名
 上交的作业不规范？一键重命名，自动提取文件名中的关键信息，如作者、日期、作业批次等，并生成规范的文件名。
 
-<img src="public/gif/multidoc_rename.png" alt="智能重命名" width="600" />
+<img src="public/gif/multidoc_rename.gif" alt="智能重命名" width="600" />
 
 
 ---
@@ -111,25 +111,19 @@
 ### 4.🔍 AI 深度调研
 自动化研究报告生成系统，支持网络搜索、网页访问、信息聚合和报告生成。可自定义 AI 智能体 Prompt，满足个性化研究需求。
 
-`![AI 调研演示](docs/gifs/research_workflow.gif)`
+<img src="public/gif/airesearch.gif" alt="AI深度调研" width="600" />
 
-![AI Research Interface](docs/images/preview_research.png)
-*(如果未显示图片，请截取调研界面并保存为 `docs/images/preview_research.png`)*
 
 ---
 
 ### 5.📜 用户中心
-可配置主题颜色、管理API
+可配置主题颜色、管理API和自定义LLM
 
 
-追踪所有模块的操作历史，支持查看详情、重新使用和批量管理。
+追踪所有模块的操作历史，所有内容保存在浏览器本地，保证数据安全
 
-所有内容保存在浏览器本地，保证数据安全
-
-s
-
-![History Panel Interface](docs/images/preview_history.png)
-*(如果未显示图片，请截取历史记录界面并保存为 `docs/images/preview_history.png`)*
+<img src="public/user/history.png" alt="历史" width="200" />
+<img src="public/user/user.png" alt="用户中心" width="270" />
 
 ---
 
@@ -168,13 +162,6 @@ npm run dev
 
 为了方便使用，您可以直接在网页右上角的 **「用户中心」** 填写 API Key：
 
-- 支持的 AI 模型：
-  -  **Google Gemini**
-  -  **Alibaba Qwen**
-  -  **DeepSeek**
-  -  **智谱GLM**
-  -  **其他 OpenAI 格式接口**
-  -  **Serper API**
 
 > 🔒 **隐私保护**：API Key 仅保存在本地浏览器 LocalStorage 中，不会上传到任何服务器。
 
@@ -190,7 +177,7 @@ npm run preview
 
 ---
 
-## 🛠️ 技术栈
+## 🛠️ 技术栈 
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
