@@ -200,26 +200,14 @@ npm run preview
 ai-doc-helper/
 ├── components/          # 组件目录
 │   ├── Editor/         # 编辑器组件
-│   │   └── MarkdownEditor.tsx
 │   ├── Layout/         # 布局组件
-│   │   ├── Header.tsx         # 顶部导航
-│   │   ├── UserCenter.tsx     # 用户中心（配置、记忆）
-│   │   ├── AboutModal.tsx     # 关于弹窗
-│   │   └── HistoryPanel.tsx   # 历史记录面板
 │   ├── MultiDoc/       # 多文档处理
-│   │   └── MultiDocProcessor.tsx
 │   ├── OCR/            # OCR 识别
-│   │   └── FormulaOCR.tsx     # 视觉识别（公式/表格/手写/PDF/去水印）
 │   ├── PDF/            # PDF 转换
-│   │   └── PDFConverter.tsx
 │   ├── Preview/        # 预览组件
-│   │   └── WordPreview.tsx
 │   ├── Research/       # AI 研究
-│   │   └── AIResearch.tsx
 │   ├── Tools/          # 工具组件
-│   │   └── DocumentTools.tsx
 │   └── WebSum/         # 网页摘要
-│       └── WebSummarizer.tsx
 ├── utils/              # 工具函数
 │   ├── aiHelper.ts     # AI 辅助函数（多模态/文本模型）
 │   ├── converter.ts    # 格式转换
@@ -227,8 +215,6 @@ ai-doc-helper/
 │   ├── settings.ts     # 配置管理（模型/主题/Prompt/记忆）
 │   ├── historyManager.ts   # 统一历史记录管理
 ├── public/             # 静态资源
-│   ├── logo.png
-│   └── ocr/           # OCR 示例图片
 ├── App.tsx             # 主应用组件
 ├── index.tsx           # 入口文件
 ├── types.ts            # 类型定义
