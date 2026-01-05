@@ -286,8 +286,9 @@ async function fetchImageBuffer(url: string): Promise<{ data: ArrayBuffer, width
 }
 
 export async function downloadDocx(markdown: string, template: WordTemplate, customStyle?: DocumentStyle) {
-  const lines = markdown.split('\n');
-  const sections: any[] = [];  
+  try {
+    const lines = markdown.split('\n');
+    const sections: any[] = [];
   // 决定使用哪种样式配置
   const style = (template === WordTemplate.CUSTOM && customStyle) ? customStyle : (DEFAULT_STYLES[template] || DEFAULT_STYLES[WordTemplate.STANDARD]);  
   // mapping alignment string to enum
@@ -479,7 +480,8 @@ export async function downloadDocx(markdown: string, template: WordTemplate, cus
         // 遍历所有单元格，设置三线表样式
         for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
           const row = tableRows[rowIndex];
-          for (const cell of row.children) {
+          const cells = Array.isArray(row.children) ? row.children : [];
+          for (const cell of cells) {
             // 初始边框配置
             const borders: any = {
               top: { style: BorderStyle.NONE, size: 0, color: "000000" },
@@ -505,7 +507,8 @@ export async function downloadDocx(markdown: string, template: WordTemplate, cus
         // 普通表格样式：所有单元格显示边框
         for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
           const row = tableRows[rowIndex];
-          for (const cell of row.children) {
+          const cells = Array.isArray(row.children) ? row.children : [];
+          for (const cell of cells) {
             // 普通表格：显示所有边框
             cell.borders = {
               top: { style: BorderStyle.SINGLE, size: 1, color: "94A3B8" },
@@ -615,11 +618,17 @@ export async function downloadDocx(markdown: string, template: WordTemplate, cus
     }],
   });
 
-  const blob = await Packer.toBlob(doc);
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `AI_Doc_${template}_${new Date().getTime()}.docx`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+    const blob = await Packer.toBlob(doc);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AI_Doc_${template}_${new Date().getTime()}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Word文档生成失败:', error);
+    throw new Error(`Word文档生成失败：${error instanceof Error ? error.message : JSON.stringify(error)}`);
+  }
 }
