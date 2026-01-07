@@ -98,31 +98,117 @@ Output strictly valid JSON with this structure:
   "extras": ["FileName"]
 }`;
 
+// Define mode-specific state type
+interface ModeState {
+  files: FileItem[];
+  resultReport: string;
+  checkResult: CheckResult | null;
+  rosterText: string;
+  renamePattern: string;
+}
+
+// Helper function to load mode state from localStorage
+const loadModeState = (mode: Mode): ModeState => {
+  const loadFiles = (): FileItem[] => {
+    try {
+      const saved = localStorage.getItem(`multidoc_${mode}_files`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const loadResultReport = (): string => {
+    // Try new format first
+    const newFormat = localStorage.getItem(`multidoc_${mode}_result_report`);
+    if (newFormat) {
+      try {
+        return newFormat;
+      } catch {
+        return '';
+      }
+    }
+    // Fallback to old format
+    try {
+      const oldFormat = localStorage.getItem('multidoc_result_report');
+      if (oldFormat) {
+        const reports = JSON.parse(oldFormat);
+        return typeof reports === 'string' ? oldFormat : (reports[mode] || '');
+      }
+    } catch {
+      return '';
+    }
+    return '';
+  };
+
+  const loadCheckResult = (): CheckResult | null => {
+    try {
+      const saved = localStorage.getItem(`multidoc_${mode}_check_result`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const loadRosterText = (): string => {
+    // Try new format first
+    const newFormat = localStorage.getItem(`multidoc_${mode}_roster_text`);
+    if (newFormat !== null) {
+      return newFormat;
+    }
+    // Fallback to old format only for missing mode
+    if (mode === 'missing') {
+      const oldFormat = localStorage.getItem('multidoc_roster_text');
+      return oldFormat || '';
+    }
+    return '';
+  };
+
+  const loadRenamePattern = (): string => {
+    // Try new format first
+    const newFormat = localStorage.getItem(`multidoc_${mode}_rename_pattern`);
+    if (newFormat !== null) {
+      return newFormat;
+    }
+    // Fallback to old format only for rename mode
+    if (mode === 'rename') {
+      const oldFormat = localStorage.getItem('multidoc_rename_pattern');
+      return oldFormat || '';
+    }
+    return '';
+  };
+
+  return {
+    files: loadFiles(),
+    resultReport: loadResultReport(),
+    checkResult: loadCheckResult(),
+    rosterText: loadRosterText(),
+    renamePattern: loadRenamePattern()
+  };
+};
+
 const MultiDocProcessor: React.FC = () => {
   const [mode, setMode] = useState<Mode>(() => {
     const saved = localStorage.getItem('multidoc_mode');
     return (saved as Mode) || 'rename';
   });
-  const [files, setFiles] = useState<FileItem[]>([]);
+  
+  // Global state (shared across all modes)
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<'preparing' | 'analyzing' | 'streaming' | 'completed' | null>(null);
   const [progressText, setProgressText] = useState<string>('');
   const [shouldStop, setShouldStop] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [resultReport, setResultReport] = useState<string>(() => {
-    const saved = localStorage.getItem('multidoc_result_report');
-    const savedMode = localStorage.getItem('multidoc_mode');
-    // Load report for the current mode if exists
-    if (savedMode && saved) {
-      try {
-        const reports = JSON.parse(saved);
-        return reports[savedMode] || '';
-      } catch (e) {
-        // 如果解析失败，可能存储的是旧格式（单字符串）
-        return saved || '';
-      }
-    }
-    return '';
+  
+  // Mode-specific state
+  const [modeStates, setModeStates] = useState<Record<Mode, ModeState>>(() => {
+    const initialStates: Record<Mode, ModeState> = {
+      deep_research: loadModeState('deep_research'),
+      report: loadModeState('report'),
+      missing: loadModeState('missing'),
+      rename: loadModeState('rename')
+    };
+    return initialStates;
   });
   
   // Research Mode
@@ -149,19 +235,8 @@ const MultiDocProcessor: React.FC = () => {
   const [newTemplatePrompt, setNewTemplatePrompt] = useState('');
   const [isOptimizingTemplatePrompt, setIsOptimizingTemplatePrompt] = useState(false);
 
-  // Roster State for Missing Mode
-  const [rosterText, setRosterText] = useState(() => {
-    return localStorage.getItem('multidoc_roster_text') || '';
-  });
-  const [checkResult, setCheckResult] = useState<CheckResult | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rosterInputRef = useRef<HTMLInputElement>(null);
-
-  // Rename Pattern State
-  const [renamePattern, setRenamePattern] = useState(() => {
-    return localStorage.getItem('multidoc_rename_pattern') || '';
-  });
 
   // Settings
   const [showSettings, setShowSettings] = useState(false);
@@ -173,30 +248,100 @@ const MultiDocProcessor: React.FC = () => {
 
   const config = getModelConfig('text');
 
+  // Helper functions to get/set current mode state
+  const getCurrentFiles = () => modeStates[mode].files;
+  const setCurrentFiles = (files: FileItem[] | ((prev: FileItem[]) => FileItem[])) => {
+    setModeStates(prev => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        files: typeof files === 'function' ? files(prev[mode].files) : files
+      }
+    }));
+  };
+
+  const getCurrentResultReport = () => modeStates[mode].resultReport;
+  const setCurrentResultReport = (report: string) => {
+    setModeStates(prev => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        resultReport: report
+      }
+    }));
+  };
+
+  const getCurrentCheckResult = () => modeStates[mode].checkResult;
+  const setCurrentCheckResult = (result: CheckResult | null) => {
+    setModeStates(prev => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        checkResult: result
+      }
+    }));
+  };
+
+  const getCurrentRosterText = () => modeStates[mode].rosterText;
+  const setCurrentRosterText = (text: string) => {
+    setModeStates(prev => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        rosterText: text
+      }
+    }));
+  };
+
+  const getCurrentRenamePattern = () => modeStates[mode].renamePattern;
+  const setCurrentRenamePattern = (pattern: string) => {
+    setModeStates(prev => ({
+      ...prev,
+      [mode]: {
+        ...prev[mode],
+        renamePattern: pattern
+      }
+    }));
+  };
+
   // Save mode to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('multidoc_mode', mode);
   }, [mode]);
 
-  // Save result report to localStorage
+  // Save mode-specific states to localStorage
   useEffect(() => {
-    // 存储为对象格式，每个模式一个
-    try {
-      const existing = localStorage.getItem('multidoc_result_report');
-      let reports: Record<string, string> = {};
-      if (existing) {
-        try {
-          reports = JSON.parse(existing);
-        } catch (e) {
-          // 如果是旧格式（单字符串），忽略
-        }
-      }
-      reports[mode] = resultReport;
-      localStorage.setItem('multidoc_result_report', JSON.stringify(reports));
-    } catch (e) {
-      console.error('Failed to save result report', e);
+    // Save files
+    localStorage.setItem(`multidoc_${mode}_files`, JSON.stringify(modeStates[mode].files));
+  }, [mode, modeStates[mode].files]);
+
+  useEffect(() => {
+    // Save result report
+    localStorage.setItem(`multidoc_${mode}_result_report`, modeStates[mode].resultReport);
+  }, [mode, modeStates[mode].resultReport]);
+
+  useEffect(() => {
+    // Save check result
+    if (modeStates[mode].checkResult) {
+      localStorage.setItem(`multidoc_${mode}_check_result`, JSON.stringify(modeStates[mode].checkResult));
     }
-  }, [resultReport, mode]);
+  }, [mode, modeStates[mode].checkResult]);
+
+  useEffect(() => {
+    // Save roster text
+    localStorage.setItem(`multidoc_${mode}_roster_text`, modeStates[mode].rosterText);
+  }, [mode, modeStates[mode].rosterText]);
+
+  useEffect(() => {
+    // Save rename pattern
+    localStorage.setItem(`multidoc_${mode}_rename_pattern`, modeStates[mode].renamePattern);
+  }, [mode, modeStates[mode].renamePattern]);
+
+  // Clear current mode state when switching modes (similar to OCR mode)
+  useEffect(() => {
+    // Clear files, results, and check results when switching modes
+    // Each mode should have its own independent state
+  }, [mode]);
 
   // Save active template to localStorage
   useEffect(() => {
@@ -207,32 +352,6 @@ const MultiDocProcessor: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('multidoc_custom_prompt', customPrompt);
   }, [customPrompt]);
-
-  // Save roster text to localStorage
-  useEffect(() => {
-    localStorage.setItem('multidoc_roster_text', rosterText);
-  }, [rosterText]);
-
-  // Save rename pattern to localStorage
-  useEffect(() => {
-    localStorage.setItem('multidoc_rename_pattern', renamePattern);
-  }, [renamePattern]);
-
-  // Load result report when mode changes
-  useEffect(() => {
-    const saved = localStorage.getItem('multidoc_result_report');
-    if (saved) {
-      try {
-        const reports = JSON.parse(saved);
-        setResultReport(reports[mode] || '');
-      } catch (e) {
-        // 如果解析失败，可能是旧格式（单字符串）
-        setResultReport('');
-      }
-    } else {
-      setResultReport('');
-    }
-  }, [mode]);
 
   // Load Custom Templates on Mount
   useEffect(() => {
@@ -407,7 +526,7 @@ Please respond with ONLY complete prompt text, nothing else.`;
 
         newFiles.push({ file, contentSnippet: snippet, status: 'pending' });
       }
-      setFiles(prev => [...prev, ...newFiles]);
+      setCurrentFiles(prev => [...prev, ...newFiles]);
     }
     if (isChangeEvent) {
       (e as React.ChangeEvent<HTMLInputElement>).target.value = '';
@@ -439,7 +558,7 @@ Please respond with ONLY complete prompt text, nothing else.`;
       try {
           const text = await parseFile(file);
           const cleanList = text.split(/\r?\n/).map(l => l.trim()).filter(l => l).join('\n');
-          setRosterText(cleanList);
+          setCurrentRosterText(cleanList);
       } catch (err) {
           alert('读取名单失败，请重试');
       }
@@ -462,9 +581,9 @@ Please respond with ONLY complete prompt text, nothing else.`;
     let samples: any[] = [];
     
     // 清除旧数据
-    setFiles([]);
-    setResultReport('');
-    setCheckResult(null);
+    setCurrentFiles([]);
+    setCurrentResultReport('');
+    setCurrentCheckResult(null);
 
     if (mode === 'rename') {
         samples = [
@@ -474,7 +593,7 @@ Please respond with ONLY complete prompt text, nothing else.`;
             { name: "final_v2_resubmit.docx", text: "姓名：赵六\nDate: 2025.11.11\nSubject: 数据库系统原理\nBatch: 第五次作业\n\nSQL优化实验报告..." },
             { name: "20240909_unknown.docx", text: "学生：陈七\n提交日期：2024年9月9日\n作业：第二次作业\n题目：操作系统进程调度\n\n..." }
         ];
-        setRenamePattern('20260101_张三_第一次作业_作业内容.docx');
+        setCurrentRenamePattern('20260101_张三_第一次作业_作业内容.docx');
     } else if (mode === 'report') {
         samples = [
             { name: "周报_萧炎.docx", text: "姓名：萧炎\n部门：强化学习组\n本周工作总结：\n1. 深入学习了强化学习算法基础。\n2. 重点研究了 PPO 算法的超参数调优。\n\n下周计划：\n- 在仿真环境中测试新模型。" },
@@ -484,12 +603,12 @@ Please respond with ONLY complete prompt text, nothing else.`;
         ];
     } else if (mode === 'missing') {
         // 设置一个花名册
-        setRosterText("孙悟空\n猪八戒\n沙悟净\n唐三藏\n白龙马");
+        setCurrentRosterText("孙悟空\n猪八戒\n沙悟净\n唐三藏\n白龙马");
         
         // 模拟提交的文件
         samples = [
             { name: "作业_孙悟空.docx", text: "这是孙悟空的作业。" },
-            { name: "八戒的检讨书.docx", text: "检讨人：猪八戒\n内容：我错了..." }, 
+            { name: "八戒的检讨书.docx", text: "检讨人：猪八戒\n内容：我错了..." },
             { name: "卷帘大将_报告.docx", text: "姓名：沙悟净\n职务：卷帘大将\n汇报..." },
             { name: "UNKNOWN_FILE.docx", text: "没有写名字的神秘文件..." }
         ];
@@ -542,32 +661,43 @@ Please respond with ONLY complete prompt text, nothing else.`;
             status: 'pending'
         });
     }
-    setFiles(newFiles);
+    setCurrentFiles(newFiles);
   };
 
   const clearFiles = () => {
-    setFiles([]);
-    setResultReport('');
-    setCheckResult(null);
+    setCurrentFiles([]);
+    // Note: Don't clear other modes' states here
+    // Each mode tracks its own state independently
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+  
+  const clearCurrentModeResults = () => {
+    // Clear results for current mode only
+    setCurrentResultReport('');
+    if (mode === 'missing') {
+      setCurrentCheckResult(null);
+      setCurrentRosterText('');
+    }
     setProgressText('');
     setProcessingStatus(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
   
   const saveToHistory = (currentMode: Mode, result: string) => {
     // 使用新的统一历史记录系统
+    const currentFiles = getCurrentFiles();
+    const currentRosterText = getCurrentRosterText();
     addHistoryItem({
       module: 'multidoc',
       status: 'success',
-      title: currentMode === 'rename' ? `智能重命名 - ${files.length} 个文件` :
-             currentMode === 'report' ? `周报聚合 - ${files.length} 个报告` :
+      title: currentMode === 'rename' ? `智能重命名 - ${currentFiles.length} 个文件` :
+             currentMode === 'report' ? `周报聚合 - ${currentFiles.length} 个报告` :
              currentMode === 'deep_research' ? `深度调研 - ${activeTemplate.title}` :
-             '作业核对',
+             `作业核对 - ${currentRosterText.split('\n').filter(l => l.trim()).length} 人名单`,
       preview: result.slice(0, 200) + (result.length > 200 ? '...' : ''),
       fullResult: result,
       metadata: {
         docMode: currentMode,
-        fileCount: files.length
+        fileCount: currentFiles.length
       }
     });
   };
@@ -575,14 +705,15 @@ Please respond with ONLY complete prompt text, nothing else.`;
   // --- Process Functions ---
 
   const processRename = async () => {
-    if (files.length === 0) return;
+    const currentFiles = getCurrentFiles();
+    if (currentFiles.length === 0) return;
     setIsProcessing(true);
     try {
-      const inputs = files.map(f => ({
+      const inputs = currentFiles.map(f => ({
         originalName: f.file.name,
         contentStart: f.contentSnippet.replace(/\n/g, ' ').substring(0, 500)
       }));
-      const effectivePattern = renamePattern || 'YYYY-MM-DD_作者_文件主题.ext';
+      const effectivePattern = getCurrentRenamePattern() || 'YYYY-MM-DD_作者_文件主题.ext';
       const prompt = `${renamePrompt}\n\nIMPORTANT: Use this Target Naming Pattern: "${effectivePattern}"\n\nFiles to process:\n${JSON.stringify(inputs, null, 2)}`;
       
       // 🐛 调试：打印完整的 Prompt
@@ -674,7 +805,7 @@ Please respond with ONLY complete prompt text, nothing else.`;
 
       console.log('AI返回的有效重命名结果:', validMapping);
 
-      setFiles(prev => prev.map(f => {
+      setCurrentFiles(prev => prev.map(f => {
         const match = validMapping.find((m: any) => m && m.originalName === f.file.name);
         
         // 🐛 调试：打印每个文件的匹配结果
@@ -696,14 +827,14 @@ Please respond with ONLY complete prompt text, nothing else.`;
       addHistoryItem({
         module: 'multidoc',
         status: 'success',
-        title: `智能重命名 - ${files.length} 个文件 (成功 ${renamedCount} 个)`,
+        title: `智能重命名 - ${currentFiles.length} 个文件 (成功 ${renamedCount} 个)`,
         preview: validMapping.slice(0, 3).map((m: any) => `${m.originalName} → ${m.newName}`).join('\n') + (validMapping.length > 3 ? '\n...' : ''),
         fullResult: JSON.stringify(validMapping),
         metadata: {
           docMode: 'rename',
-          fileCount: files.length,
+          fileCount: currentFiles.length,
           renamedCount: renamedCount,
-          failedCount: files.length - renamedCount
+          failedCount: currentFiles.length - renamedCount
         }
       });
     } catch (e) {
@@ -715,30 +846,31 @@ Please respond with ONLY complete prompt text, nothing else.`;
   };
 
   const processReport = async () => {
-    if (files.length === 0) return;
+    const currentFiles = getCurrentFiles();
+    if (currentFiles.length === 0) return;
     setIsProcessing(true);
     setShouldStop(false);
-    setResultReport('');
+    setCurrentResultReport('');
     setProcessingStatus('preparing');
-    setProgressText(`📚 正在准备 ${files.length} 个文件...`);
+    setProgressText(`📚 正在准备 ${currentFiles.length} 个文件...`);
     
     try {
       setProcessingStatus('analyzing');
-      setProgressText(`🔍 正在分析 ${files.length} 个文件内容...`);
+      setProgressText(`🔍 正在分析 ${currentFiles.length} 个文件内容...`);
       
       // Simulate file analysis progress
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < currentFiles.length; i++) {
         if (shouldStop) {
           setProcessingStatus('completed');
           setProgressText('');
           setIsProcessing(false);
           return;
         }
-        setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
+        setCurrentFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
         await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UI update
       }
       
-      const combinedContent = files.map((f, idx) => `--- Report ${idx + 1} (${f.file.name}) ---\n${f.contentSnippet}`).join('\n\n');
+      const combinedContent = currentFiles.map((f, idx) => `--- Report ${idx + 1} (${f.file.name}) ---\n${f.contentSnippet}`).join('\n\n');
       const prompt = `${reportPrompt}\n\nReports Content:\n${combinedContent}`;
       
       setProcessingStatus('streaming');
@@ -761,10 +893,10 @@ Please respond with ONLY complete prompt text, nothing else.`;
           return;
         }
         fullText += chunk;
-        setResultReport(fullText);
+        setCurrentResultReport(fullText);
       }
       
-      setFiles(prev => prev.map(f => ({ ...f, status: 'done' })));
+      setCurrentFiles(prev => prev.map(f => ({ ...f, status: 'done' })));
       setProcessingStatus('completed');
       setProgressText('✅ 周报生成完成！');
       
@@ -789,16 +921,18 @@ Please respond with ONLY complete prompt text, nothing else.`;
   };
 
   const processCheckMissing = async () => {
-      if (files.length === 0 || !rosterText.trim()) {
+      const currentFiles = getCurrentFiles();
+      const currentRosterText = getCurrentRosterText();
+      if (currentFiles.length === 0 || !currentRosterText.trim()) {
           alert("请确保已输入应交名单并上传了文件。");
           return;
       }
       setIsProcessing(true);
-      setCheckResult(null);
+      setCurrentCheckResult(null);
 
       try {
-          const rosterList = rosterText.split(/\n|,|，/).map(s => s.trim()).filter(s => s);
-          const fileInputs = files.map(f => ({
+          const rosterList = currentRosterText.split(/\n|,|，/).map(s => s.trim()).filter(s => s);
+          const fileInputs = currentFiles.map(f => ({
               fileName: f.file.name,
               snippet: f.contentSnippet.replace(/\n/g, ' ').substring(0, 200)
           }));
@@ -822,19 +956,19 @@ Please respond with ONLY complete prompt text, nothing else.`;
 
           let jsonStr = response.trim().replace(/```json|```/g, '');
           const result = JSON.parse(jsonStr);
-          setCheckResult(result);
-          setFiles(prev => prev.map(f => ({ ...f, status: 'done' })));
+          setCurrentCheckResult(result);
+          setCurrentFiles(prev => prev.map(f => ({ ...f, status: 'done' })));
           
           // 保存到统一历史记录
           addHistoryItem({
             module: 'multidoc',
             status: 'success',
-            title: `作业核对 - ${rosterText.split('\n').length} 人名单`,
+            title: `作业核对 - ${getCurrentRosterText().split('\n').filter(l => l.trim()).length} 人名单`,
             preview: `已提交: ${result.submitted.length} 人, 未交: ${result.missing.length} 人`,
             fullResult: JSON.stringify(result),
             metadata: {
               docMode: 'missing',
-              fileCount: files.length
+              fileCount: currentFiles.length
             }
           });
 
@@ -847,32 +981,33 @@ Please respond with ONLY complete prompt text, nothing else.`;
   };
 
   const processDeepResearch = async () => {
-      if (files.length === 0) return;
+      const currentFiles = getCurrentFiles();
+      if (currentFiles.length === 0) return;
       setIsProcessing(true);
       setShouldStop(false);
-      setResultReport('');
+      setCurrentResultReport('');
       setProcessingStatus('preparing');
-      setProgressText(`📚 正在准备 ${files.length} 个文档...`);
+      setProgressText(`📚 正在准备 ${currentFiles.length} 个文档...`);
       
       try {
           setProcessingStatus('analyzing');
-          setProgressText(`🔍 正在深度分析 ${files.length} 个文档...`);
+          setProgressText(`🔍 正在深度分析 ${currentFiles.length} 个文档...`);
           
           // Simulate file analysis progress
-          for (let i = 0; i < files.length; i++) {
+          for (let i = 0; i < currentFiles.length; i++) {
               if (shouldStop) {
                   setProcessingStatus('completed');
                   setProgressText('');
                   setIsProcessing(false);
                   return;
               }
-              setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
+              setCurrentFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'processing' } : f));
               await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UI update
           }
           
           // Combine all file contents
           let combinedDocs = '';
-          files.forEach((f, i) => {
+          currentFiles.forEach((f, i) => {
               combinedDocs += `\n\n=== DOCUMENT ${i+1}: ${f.file.name} ===\n${f.contentSnippet}\n`;
           });
 
@@ -898,10 +1033,10 @@ Please respond with ONLY complete prompt text, nothing else.`;
                   return;
               }
               fullText += chunk;
-              setResultReport(fullText);
+              setCurrentResultReport(fullText);
           }
           
-          setFiles(prev => prev.map(f => ({ ...f, status: 'done' })));
+          setCurrentFiles(prev => prev.map(f => ({ ...f, status: 'done' })));
           setProcessingStatus('completed');
           setProgressText('✅ 深度调研完成！');
           
@@ -941,10 +1076,11 @@ Please respond with ONLY complete prompt text, nothing else.`;
   };
 
   const handleDownloadAll = async () => {
-      if (files.length === 0) return;
+      const currentFiles = getCurrentFiles();
+      if (currentFiles.length === 0) return;
       const zip = new JSZip();
       let hasFiles = false;
-      files.forEach(f => {
+      currentFiles.forEach(f => {
           if (f.file) {
               const fileName = (f.status === 'done' && f.newName) ? f.newName : f.file.name;
               zip.file(fileName, f.file);
@@ -964,10 +1100,11 @@ Please respond with ONLY complete prompt text, nothing else.`;
   };
 
   const handleDownloadReport = async () => {
-      if (!resultReport) return;
+      const currentReport = getCurrentResultReport();
+      if (!currentReport) return;
       // Deep Research 默认使用学术模板，普通周报使用标准模板
       const tpl = mode === 'deep_research' ? WordTemplate.ACADEMIC : WordTemplate.STANDARD;
-      await downloadDocx(resultReport, tpl);
+      await downloadDocx(currentReport, tpl);
   };
 
   const openSettings = () => {
@@ -1101,7 +1238,18 @@ Please respond with ONLY complete prompt text, nothing else.`;
                             {templates.map(t => (
                                 <button
                                     key={t.id}
-                                    onClick={() => { setActiveTemplate(t); setCustomPrompt(t.prompt); clearFiles(); }}
+                                    onClick={() => {
+                                        setActiveTemplate(t);
+                                        setCustomPrompt(t.prompt);
+                                        // In deep_research mode, preserve resultReport when switching templates
+                                        // Only clear progress and status
+                                        if (mode === 'deep_research') {
+                                            setProgressText('');
+                                            setProcessingStatus(null);
+                                        } else {
+                                            clearCurrentModeResults();
+                                        }
+                                    }}
                                     className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${activeTemplate.id === t.id ? 'bg-purple-50 border-purple-500 text-purple-700 ring-1 ring-purple-500' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-500'}`}
                                 >
                                     <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={t.icon} /></svg>
@@ -1142,9 +1290,9 @@ Please respond with ONLY complete prompt text, nothing else.`;
                             </button>
                             <input type="file" ref={rosterInputRef} className="hidden" onChange={handleRosterImport} accept=".txt,.docx" />
                         </div>
-                        <textarea 
-                            value={rosterText}
-                            onChange={(e) => setRosterText(e.target.value)}
+                        <textarea
+                            value={getCurrentRosterText()}
+                            onChange={(e) => setCurrentRosterText(e.target.value)}
                             placeholder={"张三\n李四\n王五\n..."}
                             className="w-full flex-1 min-h-[150px] lg:min-h-0 p-3 rounded-lg border border-rose-200 text-sm focus:ring-2 focus:ring-rose-500 outline-none resize-none bg-white text-slate-700"
                         />
@@ -1162,15 +1310,15 @@ Please respond with ONLY complete prompt text, nothing else.`;
                             </div>
                             <input
                                 type="text"
-                                value={renamePattern}
-                                onChange={(e) => setRenamePattern(e.target.value)}
+                                value={getCurrentRenamePattern()}
+                                onChange={(e) => setCurrentRenamePattern(e.target.value)}
                                 placeholder="例如: 20260101_张三_第一次作业_作业内容.docx"
                                 className="w-full px-4 py-2 rounded-lg border border-[var(--primary-color)] border-opacity-40 bg-white text-sm focus:ring-2 focus:ring-[var(--primary-color)] outline-none text-slate-900"
                             />
                             {/* Sample Pill */}
                             <div className="pt-1">
-                                <button 
-                                    onClick={() => setRenamePattern('20260101_张三_第一次作业_作业内容.docx')}
+                                <button
+                                    onClick={() => setCurrentRenamePattern('20260101_张三_第一次作业_作业内容.docx')}
                                     className="text-[10px] bg-white border border-[var(--primary-color)] border-opacity-40 text-[var(--primary-color)] px-2 py-0.5 rounded hover:bg-[var(--primary-color)] hover:text-white transition-all"
                                 >
                                     填充示例: 20260101_张三...
@@ -1181,15 +1329,15 @@ Please respond with ONLY complete prompt text, nothing else.`;
                 )}
 
                 {/* 4. File List Area */}
-                {files.length > 0 ? (
+                {getCurrentFiles().length > 0 ? (
                     <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex-1 flex flex-col">
                         <div className="p-3 bg-slate-100 border-b border-slate-200 font-bold text-xs text-slate-500 flex justify-between">
-                            <span>已上传文件 ({files.length})</span>
+                            <span>已上传文件 ({getCurrentFiles().length})</span>
                             <button onClick={clearFiles} className="text-red-400 hover:text-red-600">清空</button>
                         </div>
                         <div className="overflow-y-auto custom-scrollbar max-h-[300px] lg:max-h-[400px]">
                             <ul className="divide-y divide-slate-200">
-                                {files.map((f, i) => (
+                                {getCurrentFiles().map((f, i) => (
                                     <li key={i} className="p-3 flex justify-between items-center hover:bg-white text-sm">
                                         <div className="truncate pr-4 flex-1">
                                             <div className="text-slate-700 font-mono truncate" title={f.file.name}>{f.file.name}</div>
@@ -1271,9 +1419,9 @@ Please respond with ONLY complete prompt text, nothing else.`;
                 <div className="mt-6">
                     <button
                         onClick={runProcess}
-                        disabled={files.length === 0 || isProcessing || (mode === 'missing' && !rosterText.trim())}
+                        disabled={getCurrentFiles().length === 0 || isProcessing || (mode === 'missing' && !getCurrentRosterText().trim())}
                         className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all ${
-                            files.length === 0 || isProcessing || (mode === 'missing' && !rosterText.trim())
+                            getCurrentFiles().length === 0 || isProcessing || (mode === 'missing' && !getCurrentRosterText().trim())
                             ? 'bg-slate-300 cursor-not-allowed'
                             : mode === 'deep_research' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:scale-105'
                             : 'bg-[var(--primary-color)] hover:bg-[var(--primary-hover)] hover:scale-105'
@@ -1282,7 +1430,7 @@ Please respond with ONLY complete prompt text, nothing else.`;
                         {isProcessing ? 'AI 正在处理...' : getActionName()}
                     </button>
 
-                    {mode === 'rename' && files.some(f => f.status === 'done') && (
+                    {mode === 'rename' && getCurrentFiles().some(f => f.status === 'done') && (
                         <button
                             onClick={handleDownloadAll}
                             className="w-full mt-3 py-3 rounded-xl font-bold text-[var(--primary-color)] bg-[var(--primary-50)] border border-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-white transition-all flex items-center justify-center shadow-sm"
@@ -1302,15 +1450,15 @@ Please respond with ONLY complete prompt text, nothing else.`;
                         <div className="h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-sm">
                             <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
                                 <h4 className="font-bold text-slate-700">核对结果 (Check Result)</h4>
-                                {checkResult && (
+                                {getCurrentCheckResult() && (
                                     <div className="text-xs space-x-2">
-                                        <span className="text-green-600 font-bold">已交: {checkResult.submitted.length}</span>
-                                        <span className="text-red-500 font-bold">未交: {checkResult.missing.length}</span>
+                                        <span className="text-green-600 font-bold">已交: {getCurrentCheckResult()!.submitted.length}</span>
+                                        <span className="text-red-500 font-bold">未交: {getCurrentCheckResult()!.missing.length}</span>
                                     </div>
                                 )}
                             </div>
                             
-                            {!checkResult ? (
+                            {!getCurrentCheckResult() ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
                                     <svg className="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                     <p className="text-sm">点击左侧"开始核对名单"查看结果</p>
@@ -1320,14 +1468,14 @@ Please respond with ONLY complete prompt text, nothing else.`;
                                     {/* Missing Column */}
                                     <div className="border border-red-100 bg-red-50/50 rounded-xl overflow-hidden flex flex-col">
                                         <div className="bg-red-100/80 px-4 py-2 text-red-700 font-bold text-xs uppercase tracking-wide flex justify-between">
-                                            <span>❌ 未交人员 ({checkResult.missing.length})</span>
+                                            <span>❌ 未交人员 ({getCurrentCheckResult()!.missing.length})</span>
                                         </div>
                                         <div className="p-3 overflow-y-auto max-h-[300px] custom-scrollbar">
-                                            {checkResult.missing.length === 0 ? (
+                                            {getCurrentCheckResult()!.missing.length === 0 ? (
                                                 <div className="text-green-500 text-sm text-center py-4">全员已交！🎉</div>
                                             ) : (
                                                 <ul className="space-y-1">
-                                                    {checkResult.missing.map((name, idx) => (
+                                                    {getCurrentCheckResult()!.missing.map((name, idx) => (
                                                         <li key={idx} className="bg-white border border-red-100 px-3 py-2 rounded text-red-600 font-bold text-sm shadow-sm">
                                                             {name}
                                                         </li>
@@ -1340,11 +1488,11 @@ Please respond with ONLY complete prompt text, nothing else.`;
                                     {/* Submitted Column */}
                                     <div className="border border-green-100 bg-green-50/50 rounded-xl overflow-hidden flex flex-col">
                                         <div className="bg-green-100/80 px-4 py-2 text-green-700 font-bold text-xs uppercase tracking-wide flex justify-between">
-                                            <span>✅ 已交人员 ({checkResult.submitted.length})</span>
+                                            <span>✅ 已交人员 ({getCurrentCheckResult()!.submitted.length})</span>
                                         </div>
                                         <div className="p-3 overflow-y-auto max-h-[300px] custom-scrollbar">
                                             <ul className="space-y-2">
-                                                {checkResult.submitted.map((item, idx) => (
+                                                {getCurrentCheckResult()!.submitted.map((item, idx) => (
                                                     <li key={idx} className="bg-white border border-green-100 px-3 py-2 rounded text-slate-700 text-sm shadow-sm">
                                                         <span className="font-bold text-green-700 block">{item.name}</span>
                                                         <span className="text-[10px] text-slate-400 block truncate" title={item.fileName}>📄 {item.fileName}</span>
@@ -1355,14 +1503,14 @@ Please respond with ONLY complete prompt text, nothing else.`;
                                     </div>
 
                                     {/* Extras Column */}
-                                    {checkResult.extras.length > 0 && (
+                                    {getCurrentCheckResult()!.extras.length > 0 && (
                                         <div className="md:col-span-2 border border-slate-200 bg-slate-50 rounded-xl overflow-hidden mt-2">
                                             <div className="bg-slate-200/50 px-4 py-2 text-slate-600 font-bold text-xs uppercase tracking-wide">
-                                                ❓ 未知文件 / 无法匹配 ({checkResult.extras.length})
+                                                ❓ 未知文件 / 无法匹配 ({getCurrentCheckResult()!.extras.length})
                                             </div>
                                             <div className="p-3">
                                                  <div className="flex flex-wrap gap-2">
-                                                    {checkResult.extras.map((name, idx) => (
+                                                    {getCurrentCheckResult()!.extras.map((name, idx) => (
                                                         <span key={idx} className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-500 truncate max-w-[200px]" title={name}>
                                                             {name}
                                                         </span>
@@ -1376,7 +1524,7 @@ Please respond with ONLY complete prompt text, nothing else.`;
                         </div>
                     )}
 
-                    {(mode === 'report' || mode === 'deep_research') && resultReport && (
+                    {(mode === 'report' || mode === 'deep_research') && getCurrentResultReport() && (
                         <div className="h-full bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-sm">
                              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
                                  <h4 className="font-bold text-slate-700">{mode === 'deep_research' ? '深度调研报告' : '周报汇总'}</h4>
@@ -1390,13 +1538,13 @@ Please respond with ONLY complete prompt text, nothing else.`;
                              </div>
                              <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-slate-50">
                                  <div className="prose prose-slate max-w-none text-sm bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                                    <ReactMarkdown>{resultReport}</ReactMarkdown>
-                                </div>
+                                    <ReactMarkdown>{getCurrentResultReport()}</ReactMarkdown>
+                               </div>
                             </div>
                         </div>
                     )}
-                    
-                    {(mode === 'report' || mode === 'deep_research') && !resultReport && (
+                     
+                    {(mode === 'report' || mode === 'deep_research') && !getCurrentResultReport() && (
                          <div className="h-full flex flex-col items-center justify-center text-slate-300 border border-slate-200 border-dashed rounded-xl">
                             <svg className="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                             <p className="text-sm">生成的报告将显示在这里</p>
