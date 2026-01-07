@@ -24,6 +24,27 @@ const AIResearch: React.FC<AIResearchProps> = ({ state, onUpdateState, onInsert,
     setSerperKey(getSerperKey());
   }, []);
 
+  // Save research state to localStorage
+  useEffect(() => {
+    localStorage.setItem('research_topic', topic);
+  }, [topic]);
+
+  useEffect(() => {
+    localStorage.setItem('research_report', report);
+  }, [report]);
+
+  useEffect(() => {
+    if (sources && sources.length > 0) {
+      localStorage.setItem('research_sources', JSON.stringify(sources));
+    }
+  }, [sources]);
+
+  useEffect(() => {
+    if (logs && logs.length > 0) {
+      localStorage.setItem('research_logs', JSON.stringify(logs));
+    }
+  }, [logs]);
+
   useEffect(() => {
     if (logsEndRef.current && isRunning) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });

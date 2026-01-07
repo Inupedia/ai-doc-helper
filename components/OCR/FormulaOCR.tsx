@@ -55,15 +55,35 @@ interface PDFResult {
 type OCRMode = 'formula' | 'table' | 'handwriting' | 'pdf';
 
 const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
-  const [mode, setMode] = useState<OCRMode>('formula');
-  const [image, setImage] = useState<string | null>(null);
+  const [mode, setMode] = useState<OCRMode>(() => {
+    const saved = localStorage.getItem('ocr_mode');
+    return (saved as OCRMode) || 'formula';
+  });
+  const [formulaImage, setFormulaImage] = useState<string | null>(() => localStorage.getItem('ocr_formula_image'));
+  const [tableImage, setTableImage] = useState<string | null>(() => localStorage.getItem('ocr_table_image'));
+  const [handwritingImage, setHandwritingImage] = useState<string | null>(() => localStorage.getItem('ocr_handwriting_image'));
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   
-  // Results State
-  const [formulaResult, setFormulaResult] = useState<FormulaResult | null>(null);
-  const [tableResult, setTableResult] = useState<TableResult | null>(null);
-  const [handwritingResult, setHandwritingResult] = useState<HandwritingResult | null>(null);
+  // Results State with localStorage persistence
+  const [formulaResult, setFormulaResult] = useState<FormulaResult | null>(() => {
+    try {
+      const saved = localStorage.getItem('ocr_formula_result');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [tableResult, setTableResult] = useState<TableResult | null>(() => {
+    try {
+      const saved = localStorage.getItem('ocr_table_result');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [handwritingResult, setHandwritingResult] = useState<HandwritingResult | null>(() => {
+    try {
+      const saved = localStorage.getItem('ocr_handwriting_result');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   
   // PDF State
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -79,11 +99,20 @@ const FormulaOCR: React.FC<FormulaOCRProps> = ({ onResult }) => {
   // Debug State - 存储 AI 原始输出
   const [rawAiOutput, setRawAiOutput] = useState<string>('');
   
-  // UI State
-  const [activeFormulaTab, setActiveFormulaTab] = useState<'block' | 'inline' | 'raw' | 'json'>('block');
-  const [activeTableTab, setActiveTableTab] = useState<'preview' | 'markdown' | 'raw'>('preview');
-  const [activeHandwritingTab, setActiveHandwritingTab] = useState<'preview' | 'markdown' | 'raw'>('preview');
-  const [copiedItem, setCopiedItem] = useState<string>('');  // 跟踪最近复制的项，用内容作为标识
+  // UI State with localStorage persistence
+  const [activeFormulaTab, setActiveFormulaTab] = useState<'block' | 'inline' | 'raw' | 'json'>(() => {
+    const saved = localStorage.getItem('ocr_formula_tab');
+    return (saved as any) || 'block';
+  });
+  const [activeTableTab, setActiveTableTab] = useState<'preview' | 'markdown' | 'raw'>(() => {
+    const saved = localStorage.getItem('ocr_table_tab');
+    return (saved as any) || 'preview';
+  });
+  const [activeHandwritingTab, setActiveHandwritingTab] = useState<'preview' | 'markdown' | 'raw'>(() => {
+    const saved = localStorage.getItem('ocr_handwriting_tab');
+    return (saved as any) || 'preview';
+  });
+  const [copiedItem, setCopiedItem] = useState<string>('');
   
   // Settings State
   const [showPromptSettings, setShowPromptSettings] = useState(false);
@@ -119,8 +148,46 @@ If no formulas found, return: { "formulas": [] }`);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
+  // Save mode to localStorage when it changes
   useEffect(() => {
-      // Clear PDF data on mount or when mode changes to keep clean state
+    localStorage.setItem('ocr_mode', mode);
+  }, [mode]);
+
+  // Save image states to localStorage
+  useEffect(() => {
+    if (formulaImage) localStorage.setItem('ocr_formula_image', formulaImage);
+  }, [formulaImage]);
+  useEffect(() => {
+    if (tableImage) localStorage.setItem('ocr_table_image', tableImage);
+  }, [tableImage]);
+  useEffect(() => {
+    if (handwritingImage) localStorage.setItem('ocr_handwriting_image', handwritingImage);
+  }, [handwritingImage]);
+
+  // Save result states to localStorage
+  useEffect(() => {
+    if (formulaResult) localStorage.setItem('ocr_formula_result', JSON.stringify(formulaResult));
+  }, [formulaResult]);
+  useEffect(() => {
+    if (tableResult) localStorage.setItem('ocr_table_result', JSON.stringify(tableResult));
+  }, [tableResult]);
+  useEffect(() => {
+    if (handwritingResult) localStorage.setItem('ocr_handwriting_result', JSON.stringify(handwritingResult));
+  }, [handwritingResult]);
+
+  // Save UI tab states
+  useEffect(() => {
+    localStorage.setItem('ocr_formula_tab', activeFormulaTab);
+  }, [activeFormulaTab]);
+  useEffect(() => {
+    localStorage.setItem('ocr_table_tab', activeTableTab);
+  }, [activeTableTab]);
+  useEffect(() => {
+    localStorage.setItem('ocr_handwriting_tab', activeHandwritingTab);
+  }, [activeHandwritingTab]);
+
+  useEffect(() => {
+      // Clear PDF data when NOT in pdf mode (no longer clear all data on mode change)
       if (mode !== 'pdf') {
           setPdfFile(null);
           setPdfDataUrl(null);
@@ -129,6 +196,38 @@ If no formulas found, return: { "formulas": [] }`);
           setStreamingMarkdown('');
       }
   }, [mode]);
+
+  // Helper function to get current image based on mode
+  const getCurrentImage = (): string | null => {
+    if (mode === 'formula') return formulaImage;
+    if (mode === 'table') return tableImage;
+    if (mode === 'handwriting') return handwritingImage;
+    return null;
+  };
+
+  // Helper function to set current image based on mode
+  const setCurrentImage = (newImage: string | null) => {
+    if (mode === 'formula') {
+      setFormulaImage(newImage);
+      setFormulaResult(null);
+    } else if (mode === 'table') {
+      setTableImage(newImage);
+      setTableResult(null);
+    } else if (mode === 'handwriting') {
+      setHandwritingImage(newImage);
+      setHandwritingResult(null);
+    }
+  };
+
+  const resetResults = () => {
+    if (mode === 'formula') {
+      setFormulaResult(null);
+    } else if (mode === 'table') {
+      setTableResult(null);
+    } else if (mode === 'handwriting') {
+      setHandwritingResult(null);
+    }
+  };
 
   // Image Processing (Common)
   const processImage = (file: File | Blob): Promise<string> => {
@@ -378,9 +477,9 @@ If no formulas found, return: { "formulas": [] }`);
           }
           
           if (sampleDataUrl) {
-              setImage(sampleDataUrl);
-              resetResults();
-          }
+               setCurrentImage(sampleDataUrl);
+               resetResults();
+           }
       } catch (e) {
           console.error("Sample generation failed", e);
           alert("无法加载示例图片");
@@ -396,7 +495,7 @@ If no formulas found, return: { "formulas": [] }`);
         if (blob) {
           try {
             const compressedImage = await processImage(blob);
-            setImage(compressedImage);
+            setCurrentImage(compressedImage);
             resetResults();
           } catch (err) {
             console.error("Image processing failed", err);
@@ -424,7 +523,7 @@ If no formulas found, return: { "formulas": [] }`);
       const file = e.dataTransfer.files[0];
       try {
         const compressedImage = await processImage(file);
-        setImage(compressedImage);
+        setCurrentImage(compressedImage);
         resetResults();
       } catch (err) {
         console.error("Image processing failed", err);
@@ -438,7 +537,7 @@ If no formulas found, return: { "formulas": [] }`);
     if (file) {
         try {
             const compressedImage = await processImage(file);
-            setImage(compressedImage);
+            setCurrentImage(compressedImage);
             resetResults();
         } catch (err) {
             console.error("Image processing failed", err);
@@ -464,12 +563,6 @@ If no formulas found, return: { "formulas": [] }`);
         alert('请选择有效的 PDF 文件');
     }
     if (e.target) e.target.value = '';
-  };
-
-  const resetResults = () => {
-    setFormulaResult(null);
-    setTableResult(null);
-    setHandwritingResult(null);
   };
 
   const parseJsonSafe = (text: string) => {
@@ -769,11 +862,12 @@ If no formulas found, return: { "formulas": [] }`);
     }
 
     // Normal Image Modes
-    if (!image) return;
+    const currentImage = getCurrentImage();
+    if (!currentImage) return;
     resetResults();
 
     try {
-      const split = image.split(',');
+      const split = currentImage.split(',');
       const meta = split[0];
       const base64Data = split[1];
       let mimeType = 'image/png';
@@ -1042,11 +1136,11 @@ If no formulas found, return: { "formulas": [] }`);
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                {image ? (
+                {getCurrentImage() ? (
                   <>
-                    <img src={image} alt="Preview" className="max-h-full max-w-full object-contain p-6" />
+                    <img src={getCurrentImage()!} alt="Preview" className="max-h-full max-w-full object-contain p-6" />
                     <div className="absolute top-4 right-4">
-                      <button onClick={() => { setImage(null); resetResults(); setIsDragOver(false); }} className="bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                      <button onClick={() => { setCurrentImage(null); resetResults(); setIsDragOver(false); }} className="bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
                   </>
                 ) : (
@@ -1092,9 +1186,9 @@ If no formulas found, return: { "formulas": [] }`);
               </button>
               <button
                 onClick={analyzeImage}
-                disabled={(!image && !pdfFile) || isAnalyzing}
+                disabled={(!getCurrentImage() && !pdfFile) || isAnalyzing}
                 className={`flex-1 py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center text-white shadow-xl ${
-                    (!image && !pdfFile) || isAnalyzing ? 'bg-slate-300 cursor-not-allowed' :
+                    (!getCurrentImage() && !pdfFile) || isAnalyzing ? 'bg-slate-300 cursor-not-allowed' :
                     mode === 'pdf' ? 'bg-rose-600 hover:bg-rose-700' :
                     mode === 'table' ? 'bg-green-600 hover:bg-green-700' :
                     mode === 'handwriting' ? 'bg-amber-500 hover:bg-amber-600' :

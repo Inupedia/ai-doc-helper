@@ -72,12 +72,19 @@ const App: React.FC = () => {
     };
   });
 
-  const [researchState, setResearchState] = useState<ResearchState>({
-    topic: '',
-    isRunning: false,
-    logs: [],
-    report: '',
-    sources: []
+  const [researchState, setResearchState] = useState<ResearchState>(() => {
+    const savedTopic = localStorage.getItem('research_topic');
+    const savedReport = localStorage.getItem('research_report');
+    const savedSources = localStorage.getItem('research_sources');
+    const savedLogs = localStorage.getItem('research_logs');
+    
+    return {
+      topic: savedTopic || '',
+      isRunning: false,
+      logs: savedLogs ? JSON.parse(savedLogs) : [],
+      report: savedReport || '',
+      sources: savedSources ? JSON.parse(savedSources) : []
+    };
   });
 
   // Load and apply theme on mount

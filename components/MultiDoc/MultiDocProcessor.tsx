@@ -99,19 +99,49 @@ Output strictly valid JSON with this structure:
 }`;
 
 const MultiDocProcessor: React.FC = () => {
-  const [mode, setMode] = useState<Mode>('rename');
+  const [mode, setMode] = useState<Mode>(() => {
+    const saved = localStorage.getItem('multidoc_mode');
+    return (saved as Mode) || 'rename';
+  });
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<'preparing' | 'analyzing' | 'streaming' | 'completed' | null>(null);
   const [progressText, setProgressText] = useState<string>('');
   const [shouldStop, setShouldStop] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [resultReport, setResultReport] = useState<string>('');
+  const [resultReport, setResultReport] = useState<string>(() => {
+    const saved = localStorage.getItem('multidoc_result_report');
+    const savedMode = localStorage.getItem('multidoc_mode');
+    // Load report for the current mode if exists
+    if (savedMode && saved) {
+      try {
+        const reports = JSON.parse(saved);
+        return reports[savedMode] || '';
+      } catch (e) {
+        // 如果解析失败，可能存储的是旧格式（单字符串）
+        return saved || '';
+      }
+    }
+    return '';
+  });
   
   // Research Mode
   const [templates, setTemplates] = useState<ResearchTemplate[]>(RESEARCH_TEMPLATES);
-  const [activeTemplate, setActiveTemplate] = useState<ResearchTemplate>(RESEARCH_TEMPLATES[0]);
-  const [customPrompt, setCustomPrompt] = useState(RESEARCH_TEMPLATES[0].prompt);
+  const [activeTemplate, setActiveTemplate] = useState<ResearchTemplate>(() => {
+    const saved = localStorage.getItem('multidoc_active_template');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return RESEARCH_TEMPLATES[0];
+      }
+    }
+    return RESEARCH_TEMPLATES[0];
+  });
+  const [customPrompt, setCustomPrompt] = useState(() => {
+    const saved = localStorage.getItem('multidoc_custom_prompt');
+    return saved || RESEARCH_TEMPLATES[0].prompt;
+  });
   
   // Custom Template Creation
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
@@ -120,14 +150,18 @@ const MultiDocProcessor: React.FC = () => {
   const [isOptimizingTemplatePrompt, setIsOptimizingTemplatePrompt] = useState(false);
 
   // Roster State for Missing Mode
-  const [rosterText, setRosterText] = useState('');
+  const [rosterText, setRosterText] = useState(() => {
+    return localStorage.getItem('multidoc_roster_text') || '';
+  });
   const [checkResult, setCheckResult] = useState<CheckResult | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rosterInputRef = useRef<HTMLInputElement>(null);
 
   // Rename Pattern State
-  const [renamePattern, setRenamePattern] = useState('');
+  const [renamePattern, setRenamePattern] = useState(() => {
+    return localStorage.getItem('multidoc_rename_pattern') || '';
+  });
 
   // Settings
   const [showSettings, setShowSettings] = useState(false);
@@ -138,6 +172,67 @@ const MultiDocProcessor: React.FC = () => {
   const [tempPrompt, setTempPrompt] = useState('');
 
   const config = getModelConfig('text');
+
+  // Save mode to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('multidoc_mode', mode);
+  }, [mode]);
+
+  // Save result report to localStorage
+  useEffect(() => {
+    // 存储为对象格式，每个模式一个
+    try {
+      const existing = localStorage.getItem('multidoc_result_report');
+      let reports: Record<string, string> = {};
+      if (existing) {
+        try {
+          reports = JSON.parse(existing);
+        } catch (e) {
+          // 如果是旧格式（单字符串），忽略
+        }
+      }
+      reports[mode] = resultReport;
+      localStorage.setItem('multidoc_result_report', JSON.stringify(reports));
+    } catch (e) {
+      console.error('Failed to save result report', e);
+    }
+  }, [resultReport, mode]);
+
+  // Save active template to localStorage
+  useEffect(() => {
+    localStorage.setItem('multidoc_active_template', JSON.stringify(activeTemplate));
+  }, [activeTemplate]);
+
+  // Save custom prompt to localStorage
+  useEffect(() => {
+    localStorage.setItem('multidoc_custom_prompt', customPrompt);
+  }, [customPrompt]);
+
+  // Save roster text to localStorage
+  useEffect(() => {
+    localStorage.setItem('multidoc_roster_text', rosterText);
+  }, [rosterText]);
+
+  // Save rename pattern to localStorage
+  useEffect(() => {
+    localStorage.setItem('multidoc_rename_pattern', renamePattern);
+  }, [renamePattern]);
+
+  // Load result report when mode changes
+  useEffect(() => {
+    const saved = localStorage.getItem('multidoc_result_report');
+    if (saved) {
+      try {
+        const reports = JSON.parse(saved);
+        setResultReport(reports[mode] || '');
+      } catch (e) {
+        // 如果解析失败，可能是旧格式（单字符串）
+        setResultReport('');
+      }
+    } else {
+      setResultReport('');
+    }
+  }, [mode]);
 
   // Load Custom Templates on Mount
   useEffect(() => {
