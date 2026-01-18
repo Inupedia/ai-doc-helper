@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import mammoth from 'mammoth';
+import MathEditorController, { type MathEditorHandle } from './MathEditorController';
 import { getModelConfig } from '../../utils/settings';
 import { generateContentStream } from '../../utils/aiHelper';
 import { htmlToMarkdown } from '../../utils/converter';
@@ -39,6 +40,7 @@ const DEFAULT_TOOLS: Tool[] = [
 const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onProcessing, onResetToDefault }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mathEditorRef = useRef<MathEditorHandle>(null);
   const [showAiTools, setShowAiTools] = useState(false);
   const [history, setHistory] = useState<string[]>([value]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -282,11 +284,15 @@ Please respond with ONLY the complete prompt text, nothing else.`;
     }
   };
 
+  const openMathEditor = () => {
+    mathEditorRef.current?.open();
+  };
+
   const toolbarActions = [
     { label: 'H1', action: () => insertText('# ') },
     { label: 'H2', action: () => insertText('## ') },
     { label: 'B', action: () => insertText('**', '**') },
-    { label: 'Math', action: () => insertText('$$', '$$') },
+    { label: 'Math', action: () => openMathEditor() },
     { label: 'Code', action: () => insertText('```\n', '\n```') },
     { label: 'Img', action: () => insertText('![alt](', ')') }, 
   ];
@@ -549,6 +555,13 @@ Please respond with ONLY the complete prompt text, nothing else.`;
         onClick={checkSelection}
         onPaste={handlePaste} // Paste Handler Added
         readOnly={isLocked}
+      />
+
+      <MathEditorController
+        ref={mathEditorRef}
+        textareaRef={textareaRef}
+        updateHistory={updateHistory}
+        isLocked={isLocked}
       />
 
       {/* Modals for Edit/Create */}
