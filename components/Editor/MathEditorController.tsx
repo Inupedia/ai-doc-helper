@@ -20,7 +20,6 @@ const MATH_EDITOR_LABELS: MathEditorModalLabels = {
   placeholder: '输入或点击下方按钮生成公式',
   previewLabel: '预览',
   previewEmpty: '输入公式后将显示预览',
-  shortcutHint: '快捷键：Ctrl+Enter 插入',
   clear: '清空',
   cancel: '取消',
   insert: '插入公式'
@@ -32,12 +31,36 @@ const MATH_SNIPPET_GROUPS: MathSnippetGroup[] = [
     items: [
       { label: 'a/b', latex: '\\frac{}{}', cursorOffset: 6 },
       { label: '√x', latex: '\\sqrt{}', cursorOffset: 6 },
-      { label: 'x^□', latex: '^{}', cursorOffset: 2 },
-      { label: 'x_□', latex: '_{}', cursorOffset: 2 },
+      { label: '^□', latex: '^{}', cursorOffset: 2 },
+      { label: '_□', latex: '_{}', cursorOffset: 2 },
+      { label: 'x^{ }', latex: 'x^{}', cursorOffset: 3 },
+      { label: 'x_{ }', latex: 'x_{}', cursorOffset: 3 },
+      { label: '|x|', latex: '\\left| \\right|', cursorOffset: 8 },
+      { label: '‖x‖', latex: '\\left\\| \\right\\|', cursorOffset: 10 },
       { label: '∑', latex: '\\sum_{}^{}', cursorOffset: 6 },
+      { label: '∑ i=1..n', latex: '\\sum_{i=1}^{n}', cursorOffset: 14 },
       { label: '∫', latex: '\\int_{}^{}', cursorOffset: 6 },
+      { label: '∫ dx', latex: '\\int \\mathrm{d}x', cursorOffset: 0 },
       { label: 'lim', latex: '\\lim_{}', cursorOffset: 5 },
       { label: '( )', latex: '\\left( \\right)', cursorOffset: 7 }
+    ]
+  },
+  {
+    title: '结构进阶',
+    items: [
+      { label: '{cases}', latex: '\\begin{cases} \\\\ \\end{cases}', cursorOffset: 18 }
+    ]
+  },
+  {
+    title: '文本',
+    items: [
+      { label: 'text', latex: '\\text{}', cursorOffset: 6 },
+      { label: 'rm', latex: '\\mathrm{}', cursorOffset: 8 },
+      { label: 'bf', latex: '\\mathbf{}', cursorOffset: 8 },
+      { label: 'bold', latex: '\\boldsymbol{}', cursorOffset: 12 },
+      { label: 'cal', latex: '\\mathcal{}', cursorOffset: 10 },
+      { label: 'bb', latex: '\\mathbb{}', cursorOffset: 9 },
+      { label: 'op', latex: '\\operatorname{}', cursorOffset: 15 }
     ]
   },
   {
@@ -52,6 +75,30 @@ const MATH_SNIPPET_GROUPS: MathSnippetGroup[] = [
       { label: '≠', latex: '\\neq' },
       { label: '≈', latex: '\\approx' },
       { label: '∞', latex: '\\infty' }
+    ]
+  },
+  {
+    title: '逻辑与集合',
+    items: [
+      { label: '⇒', latex: '\\Rightarrow' },
+      { label: '⇔', latex: '\\Leftrightarrow' },
+      { label: '∧', latex: '\\land' },
+      { label: '∨', latex: '\\lor' },
+      { label: '¬', latex: '\\lnot' },
+      { label: '∈', latex: '\\in' },
+      { label: '⊂', latex: '\\subset' },
+      { label: '∪', latex: '\\cup' },
+      { label: '∩', latex: '\\cap' },
+      { label: '∅', latex: '\\emptyset' }
+    ]
+  },
+  {
+    title: '概率统计',
+    items: [
+      { label: 'P()', latex: '\\mathbb{P}()' },
+      { label: 'E()', latex: '\\mathbb{E}[]', cursorOffset: 0 },
+      { label: 'Var', latex: '\\operatorname{Var}()' },
+      { label: 'argmax', latex: '\\operatorname{argmax}_{}', cursorOffset: 17 }
     ]
   },
   {

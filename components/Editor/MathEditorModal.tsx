@@ -25,7 +25,6 @@ export interface MathEditorModalLabels {
   placeholder: string;
   previewLabel: string;
   previewEmpty: string;
-  shortcutHint: string;
   clear: string;
   cancel: string;
   insert: string;
@@ -85,13 +84,6 @@ const MathEditorModal: React.FC<MathEditorModalProps> = ({
     onInsert(trimmed, displayMode);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleInsert();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -138,7 +130,6 @@ const MathEditorModal: React.FC<MathEditorModalProps> = ({
                 placeholder={labels.placeholder}
                 value={latex}
                 onChange={(e) => setLatex(e.target.value)}
-                onKeyDown={handleKeyDown}
               ></textarea>
               <div className="mt-3 space-y-3">
                 {snippetGroups.map((group) => (
@@ -172,7 +163,6 @@ const MathEditorModal: React.FC<MathEditorModalProps> = ({
                   <div className="text-xs text-slate-400">{labels.previewEmpty}</div>
                 )}
               </div>
-              <p className="text-[10px] text-slate-400 mt-2">{labels.shortcutHint}</p>
             </div>
           </div>
           <div className="flex items-center justify-between">
